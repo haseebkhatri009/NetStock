@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  @apply bg-paper text-ink font-body antialiased;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Signature: network trace line connecting nav nodes in the sidebar */
+.circuit-track {
+  position: absolute;
+  left: 22px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(15,166,166,0.05), rgba(15,166,166,0.35) 15%, rgba(15,166,166,0.35) 85%, rgba(15,166,166,0.05));
+}
+
+.circuit-node {
+  position: relative;
+  z-index: 1;
+}
+
+.circuit-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #2A3752;
+  transition: all 0.2s ease;
+}
+
+.circuit-node.active .circuit-dot {
+  background: #0FA6A6;
+  box-shadow: 0 0 0 4px rgba(15,166,166,0.18);
+}
+
+.input {
+  @apply w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm outline-none focus:border-teal transition-colors;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 999px;
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(15,166,166,0.35); }
+  100% { box-shadow: 0 0 0 8px rgba(15,166,166,0); }
+}
+.pulse-ring {
+  animation: pulse-ring 1.8s ease-out infinite;
+}
+
+input[type="text"]:focus-visible,
+input[type="number"]:focus-visible,
+input[type="email"]:focus-visible,
+input[type="password"]:focus-visible,
+input[type="date"]:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+  outline: 2px solid #0FA6A6;
+  outline-offset: 2px;
+}
