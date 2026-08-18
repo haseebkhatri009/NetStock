@@ -1781,7 +1781,6 @@ async function incrementQuotationCounter(companyId) {
 export default function Quotation() {
   const { companyId } = useAuth()
   const printRef = useRef(null)
-  const pdfRef = useRef(null)
 
   const [loading, setLoading] = useState(true)
   const [quotations, setQuotations] = useState([])
@@ -2165,7 +2164,7 @@ export default function Quotation() {
   }
 
   /* ============================================================
-     SAVE AS PDF
+     SAVE AS PDF - FIXED WHITE BACKGROUND
      ============================================================ */
 
   const handleSavePdf = async (quotation) => {
@@ -2184,7 +2183,7 @@ export default function Quotation() {
       
       setPreviewData(previewQuotation)
       
-      await new Promise(resolve => setTimeout(resolve, 800))
+      await new Promise(resolve => setTimeout(resolve, 600))
       
       const element = document.getElementById('quotation-pdf-content')
       
@@ -2195,15 +2194,24 @@ export default function Quotation() {
       }
       
       const canvas = await html2canvas(element, {
-        scale: 2,
+        scale: 1.2,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
         width: 794,
-        height: 1123
+        height: 1123,
+        windowWidth: 794,
+        windowHeight: 1123,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.getElementById('quotation-pdf-content')
+          if (clonedElement) {
+            clonedElement.style.background = '#ffffff'
+            clonedElement.style.backgroundColor = '#ffffff'
+          }
+        }
       })
       
-      const imgData = canvas.toDataURL('image/png')
+      const imgData = canvas.toDataURL('image/png', 0.85)
       const pdf = new jsPDF('p', 'mm', 'a4')
       const pdfWidth = 210
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width

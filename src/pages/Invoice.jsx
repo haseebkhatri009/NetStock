@@ -3120,9 +3120,8 @@
 
 
 
-
-import { useEffect, useMemo, useState } from 'react'
-import { ref, push, onValue, update } from 'firebase/database'
+import { useEffect, useMemo, useState, useRef } from 'react'
+import { ref, push, onValue, update, get, set } from 'firebase/database'
 import {
   Plus,
   Trash2,
@@ -3184,6 +3183,92 @@ const COMPANY_STRN = '-'
 
 
 /* ============================================================
+   INVOICE NUMBER GENERATOR - DATE BASED WITH COUNTER
+   ============================================================ */
+
+// Get today's date in YYYYMMDD format
+function getTodayDateString() {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}${month}${day}`
+}
+
+// Yeh function SIRF next number READ karega, INCREMENT nahi karega
+async function getNextInvoiceNumber(companyId) {
+  try {
+    const dateStr = getTodayDateString()
+    const counterRef = ref(db, `companies/${companyId}/counters/invoice`)
+    const snapshot = await get(counterRef)
+    
+    let lastNumber = 0
+    let lastDate = ''
+    
+    if (snapshot.exists()) {
+      const data = snapshot.val()
+      lastNumber = data.number || 0
+      lastDate = data.date || ''
+    }
+    
+    // Agar date change ho gayi hai toh counter reset karo
+    let nextNumber = lastNumber + 1
+    if (lastDate !== dateStr) {
+      nextNumber = 1
+    }
+    
+    const padded = String(nextNumber).padStart(4, '0')
+    return `INV-${dateStr}-${padded}`
+    
+  } catch (error) {
+    console.error('Error getting invoice number:', error)
+    const dateStr = getTodayDateString()
+    const timestamp = Date.now().toString().slice(-6)
+    return `INV-${dateStr}-${timestamp}`
+  }
+}
+
+// Yeh function SIRF increment karega (save ke waqt)
+async function incrementInvoiceCounter(companyId) {
+  try {
+    const dateStr = getTodayDateString()
+    const counterRef = ref(db, `companies/${companyId}/counters/invoice`)
+    const snapshot = await get(counterRef)
+    
+    let lastNumber = 0
+    let lastDate = ''
+    
+    if (snapshot.exists()) {
+      const data = snapshot.val()
+      lastNumber = data.number || 0
+      lastDate = data.date || ''
+    }
+    
+    // Agar date change ho gayi hai toh counter reset karo
+    let newNumber = lastNumber + 1
+    if (lastDate !== dateStr) {
+      newNumber = 1
+    }
+    
+    // Counter update karo with date and number
+    await set(counterRef, {
+      date: dateStr,
+      number: newNumber
+    })
+    
+    return {
+      number: newNumber,
+      date: dateStr
+    }
+    
+  } catch (error) {
+    console.error('Error incrementing counter:', error)
+    return null
+  }
+}
+
+
+/* ============================================================
    EMPTY PRODUCT
    ============================================================ */
 
@@ -3213,6 +3298,8 @@ export default function Invoice() {
   const [editingInvoice, setEditingInvoice] = useState(null)
 
   const [customerId, setCustomerId] = useState('')
+
+  const [invoiceNumber, setInvoiceNumber] = useState('')  // NEW: Invoice Number state
 
   const [poNumber, setPoNumber] = useState('')
 
@@ -3528,6 +3615,8 @@ export default function Invoice() {
 
     setCustomerId('')
 
+    setInvoiceNumber('')  // Reset invoice number
+
     setPoNumber('')
 
     setPoDate('')
@@ -3557,9 +3646,14 @@ export default function Invoice() {
      OPEN NEW INVOICE
      ============================================================ */
 
-  function openNewInvoice() {
+  const openNewInvoice = async () => {
 
     resetForm()
+
+    if (companyId) {
+      const number = await getNextInvoiceNumber(companyId)
+      setInvoiceNumber(number)
+    }
 
     setShowForm(true)
 
@@ -3576,6 +3670,10 @@ export default function Invoice() {
 
     setCustomerId(
       invoice.customerId || ''
+    )
+
+    setInvoiceNumber(
+      invoice.invoiceNumber || ''  // Set invoice number
     )
 
     setPoNumber(
@@ -3700,6 +3798,22 @@ export default function Invoice() {
 
     try {
 
+      let finalInvoiceNumber = invoiceNumber
+
+      // Agar editing nahi hai (new invoice) toh counter increment karo
+      if (!editingInvoice) {
+        // Counter increment karo (tracking ke liye)
+        await incrementInvoiceCounter(companyId)
+        
+        // Agar user ne number empty chhoda hai toh fallback generate karo
+        if (!finalInvoiceNumber || finalInvoiceNumber.trim() === '') {
+          const dateStr = getTodayDateString()
+          const timestamp = Date.now().toString().slice(-6)
+          finalInvoiceNumber = `INV-${dateStr}-${timestamp}`
+          setInvoiceNumber(finalInvoiceNumber)
+        }
+      }
+
       /* ========================================================
          UPDATE EXISTING INVOICE
          ======================================================== */
@@ -3716,7 +3830,7 @@ export default function Invoice() {
         const updatedInvoice = {
 
           invoiceNumber:
-            editingInvoice.invoiceNumber,
+            finalInvoiceNumber,  // Use editable invoice number
 
           date:
             editingInvoice.date ||
@@ -3855,9 +3969,6 @@ export default function Invoice() {
          CREATE NEW INVOICE
          ======================================================== */
 
-      const invoiceNumber =
-        docNumber('INV')
-
       const date =
         todayISO()
 
@@ -3866,7 +3977,7 @@ export default function Invoice() {
 
         invoiceNumber:
 
-          invoiceNumber,
+          finalInvoiceNumber,
 
         date:
 
@@ -3960,7 +4071,7 @@ export default function Invoice() {
 
         invoiceNumber:
 
-          invoiceNumber,
+          finalInvoiceNumber,
 
         date:
 
@@ -4056,17 +4167,12 @@ export default function Invoice() {
 
 
   /* ============================================================
-     DOWNLOAD PDF - USING PRINT METHOD
+     DOWNLOAD PDF - SHOW PREVIEW FIRST
      ============================================================ */
 
   function handleDownloadPdf(invoice) {
     const previewInvoice = convertInvoiceToPreview(invoice)
     setPreview(previewInvoice)
-    
-    // Wait for preview to render, then trigger print
-    setTimeout(() => {
-      window.print()
-    }, 500)
   }
 
 
@@ -4268,7 +4374,7 @@ export default function Invoice() {
                             </button>
 
 
-                            {/* DOWNLOAD PDF - SAME AS PRINT */}
+                            {/* DOWNLOAD PDF */}
                             <button
                               onClick={() =>
                                 handleDownloadPdf(
@@ -4333,12 +4439,40 @@ export default function Invoice() {
 
 
               {/* =================================================
-                  CUSTOMER + PO
+                  CUSTOMER + INVOICE NUMBER
                   ================================================= */}
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                <label className="block md:col-span-2">
+                <label className="block">
+
+                  <span className="text-xs font-medium text-slateink">
+                    Invoice Number *
+                  </span>
+
+                  <input
+                    type="text"
+                    value={
+                      invoiceNumber
+                    }
+                    onChange={(e) =>
+                      setInvoiceNumber(
+                        e.target.value
+                      )
+                    }
+                    className="input mt-1"
+                    placeholder="INV-YYYYMMDD-0001"
+                    required
+                  />
+
+                  <small className="text-xs text-slateink mt-1 block">
+                    Format: INV-YYYYMMDD-0001 (Auto-generated)
+                  </small>
+
+                </label>
+
+
+                <label className="block">
 
                   <span className="text-xs font-medium text-slateink">
                     Customer *
@@ -4392,6 +4526,14 @@ export default function Invoice() {
 
                 </label>
 
+              </div>
+
+
+              {/* =================================================
+                  PO NUMBER + PO DATE
+                  ================================================= */}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                 <label className="block">
 

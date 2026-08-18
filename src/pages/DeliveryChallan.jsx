@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
-import { ref, push, onValue, update, get } from 'firebase/database'
+import { ref, push, onValue, update, get, set } from 'firebase/database'
 import {
   Plus,
   Trash2,
@@ -20,8 +20,6 @@ import {
 
 import { Modal } from './Customers'
 import Loader from '../components/Loader'
-import html2canvas from 'html2canvas'
-import jsPDF from 'jspdf'
 
 
 /* ============================================================
@@ -36,6 +34,92 @@ Shahrah-e-Faisal, near Duty Free Shop,
 Karachi, 75660
 `
 const COMPANY_EMAIL = 'info@globalonesystem.com'
+
+
+/* ============================================================
+   DC NUMBER GENERATOR - DATE BASED WITH COUNTER
+   ============================================================ */
+
+// Get today's date in YYYYMMDD format
+function getTodayDateString() {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}${month}${day}`
+}
+
+// Yeh function SIRF next number READ karega, INCREMENT nahi karega
+async function getNextDcNumber(companyId) {
+  try {
+    const dateStr = getTodayDateString()
+    const counterRef = ref(db, `companies/${companyId}/counters/dc`)
+    const snapshot = await get(counterRef)
+    
+    let lastNumber = 0
+    let lastDate = ''
+    
+    if (snapshot.exists()) {
+      const data = snapshot.val()
+      lastNumber = data.number || 0
+      lastDate = data.date || ''
+    }
+    
+    // Agar date change ho gayi hai toh counter reset karo
+    let nextNumber = lastNumber + 1
+    if (lastDate !== dateStr) {
+      nextNumber = 1
+    }
+    
+    const padded = String(nextNumber).padStart(4, '0')
+    return `DC-${dateStr}-${padded}`
+    
+  } catch (error) {
+    console.error('Error getting DC number:', error)
+    const dateStr = getTodayDateString()
+    const timestamp = Date.now().toString().slice(-6)
+    return `DC-${dateStr}-${timestamp}`
+  }
+}
+
+// Yeh function SIRF increment karega (save ke waqt)
+async function incrementDcCounter(companyId) {
+  try {
+    const dateStr = getTodayDateString()
+    const counterRef = ref(db, `companies/${companyId}/counters/dc`)
+    const snapshot = await get(counterRef)
+    
+    let lastNumber = 0
+    let lastDate = ''
+    
+    if (snapshot.exists()) {
+      const data = snapshot.val()
+      lastNumber = data.number || 0
+      lastDate = data.date || ''
+    }
+    
+    // Agar date change ho gayi hai toh counter reset karo
+    let newNumber = lastNumber + 1
+    if (lastDate !== dateStr) {
+      newNumber = 1
+    }
+    
+    // Counter update karo with date and number
+    await set(counterRef, {
+      date: dateStr,
+      number: newNumber
+    })
+    
+    return {
+      number: newNumber,
+      date: dateStr
+    }
+    
+  } catch (error) {
+    console.error('Error incrementing counter:', error)
+    return null
+  }
+}
 
 
 /* ============================================================
@@ -70,6 +154,7 @@ export default function DeliveryChallan() {
   const [editingChallan, setEditingChallan] = useState(null)
 
   const [customerId, setCustomerId] = useState('')
+  const [dcNumber, setDcNumber] = useState('')
 
   const [items, setItems] = useState([])
 
@@ -163,6 +248,7 @@ export default function DeliveryChallan() {
 
   function resetForm() {
     setCustomerId('')
+    setDcNumber('')
     setItems([])
     setPickStockId('')
     setPickQty(1)
@@ -175,8 +261,12 @@ export default function DeliveryChallan() {
      OPEN NEW CHALLAN
      ============================================================ */
 
-  function openNewChallan() {
+  const openNewChallan = async () => {
     resetForm()
+    if (companyId) {
+      const number = await getNextDcNumber(companyId)
+      setDcNumber(number)
+    }
     setShowForm(true)
   }
 
@@ -189,6 +279,7 @@ export default function DeliveryChallan() {
     setError('')
     setEditingChallan(challan)
     setCustomerId(challan.customerId || '')
+    setDcNumber(challan.dcNumber || '')
 
     const oldItems = Array.isArray(challan.items)
       ? challan.items.map((item) => ({
@@ -397,16 +488,31 @@ export default function DeliveryChallan() {
 
     try {
       const date = editingChallan?.date || todayISO()
-      const dcNumber = editingChallan?.dcNumber || docNumber('DC')
+      
+      let finalDcNumber = dcNumber
+
+      // Agar editing nahi hai (new challan) toh counter increment karo
+      if (!editingChallan) {
+        // Counter increment karo (tracking ke liye)
+        await incrementDcCounter(companyId)
+        
+        // Agar user ne number empty chhoda hai toh fallback generate karo
+        if (!finalDcNumber || finalDcNumber.trim() === '') {
+          const dateStr = getTodayDateString()
+          const timestamp = Date.now().toString().slice(-6)
+          finalDcNumber = `DC-${dateStr}-${timestamp}`
+          setDcNumber(finalDcNumber)
+        }
+      }
 
       if (editingChallan) {
         const restoreUpdates = await restoreOldStock(editingChallan.items || [])
-        const deductUpdates = await deductStock(items, customer, customerId, dcNumber, date)
+        const deductUpdates = await deductStock(items, customer, customerId, finalDcNumber, date)
 
         const allUpdates = {
           ...restoreUpdates,
           ...deductUpdates,
-          [`companies/${companyId}/challans/${editingChallan.id}/dcNumber`]: dcNumber,
+          [`companies/${companyId}/challans/${editingChallan.id}/dcNumber`]: finalDcNumber,
           [`companies/${companyId}/challans/${editingChallan.id}/date`]: date,
           [`companies/${companyId}/challans/${editingChallan.id}/customerId`]: customerId,
           [`companies/${companyId}/challans/${editingChallan.id}/customerName`]: customer.name,
@@ -422,7 +528,7 @@ export default function DeliveryChallan() {
 
         setPreview({
           id: editingChallan.id,
-          dcNumber,
+          dcNumber: finalDcNumber,
           date,
           customerId,
           customer,
@@ -437,7 +543,7 @@ export default function DeliveryChallan() {
 
       const challansRef = ref(db, `companies/${companyId}/challans`)
       const newRef = await push(challansRef, {
-        dcNumber,
+        dcNumber: finalDcNumber,
         date,
         customerId,
         customerName: customer.name,
@@ -449,12 +555,12 @@ export default function DeliveryChallan() {
         createdAt: Date.now()
       })
 
-      const updates = await deductStock(items, customer, customerId, dcNumber, date)
+      const updates = await deductStock(items, customer, customerId, finalDcNumber, date)
       await update(ref(db), updates)
 
       setPreview({
         id: newRef.key,
-        dcNumber,
+        dcNumber: finalDcNumber,
         date,
         customerId,
         customer,
@@ -470,6 +576,29 @@ export default function DeliveryChallan() {
     } finally {
       setSaving(false)
     }
+  }
+
+
+  /* ============================================================
+     DOWNLOAD PDF - SHOW PREVIEW FIRST
+     ============================================================ */
+
+  function handleDownloadPdf(challan) {
+    const previewChallan = {
+      id: challan.id,
+      dcNumber: challan.dcNumber,
+      date: challan.date,
+      items: challan.items || [],
+      companyName: challan.companyName || COMPANY_NAME,
+      customer: {
+        name: challan.customerName,
+        company: challan.customerCompany,
+        phone: challan.customerPhone,
+        address: challan.customerAddress
+      }
+    }
+    
+    setPreview(previewChallan)
   }
 
 
@@ -523,24 +652,38 @@ export default function DeliveryChallan() {
                     <td className="px-4 py-3 text-xs text-slateink">{c.items?.length || 0} item(s)</td>
                     <td className="px-4 py-3 text-xs font-mono text-slateink">{formatDate(c.date)}</td>
                     <td className="px-4 py-3">
-                      <div className="flex justify-end items-center gap-4">
-                        <button onClick={() => setPreview({
-                          id: c.id,
-                          dcNumber: c.dcNumber,
-                          date: c.date,
-                          items: c.items || [],
-                          companyName: c.companyName || COMPANY_NAME,
-                          customer: {
-                            name: c.customerName,
-                            company: c.customerCompany,
-                            phone: c.customerPhone,
-                            address: c.customerAddress
-                          }
-                        })} className="flex items-center gap-1.5 text-teal-dark text-xs font-medium hover:underline">
+                      <div className="flex justify-end items-center gap-2 flex-wrap">
+                        <button 
+                          onClick={() => setPreview({
+                            id: c.id,
+                            dcNumber: c.dcNumber,
+                            date: c.date,
+                            items: c.items || [],
+                            companyName: c.companyName || COMPANY_NAME,
+                            customer: {
+                              name: c.customerName,
+                              company: c.customerCompany,
+                              phone: c.customerPhone,
+                              address: c.customerAddress
+                            }
+                          })} 
+                          className="flex items-center gap-1.5 text-teal-dark text-xs font-medium hover:underline"
+                        >
                           <Printer size={14} /> View
                         </button>
-                        <button onClick={() => openEditChallan(c)} className="flex items-center gap-1.5 text-ink text-xs font-medium hover:underline">
+
+                        <button 
+                          onClick={() => openEditChallan(c)} 
+                          className="flex items-center gap-1.5 text-ink text-xs font-medium hover:underline"
+                        >
                           <Pencil size={14} /> Edit
+                        </button>
+
+                        <button
+                          onClick={() => handleDownloadPdf(c)}
+                          className="flex items-center gap-1.5 text-red-600 text-xs font-medium hover:text-red-800"
+                        >
+                          <Download size={14} /> PDF
                         </button>
                       </div>
                     </td>
@@ -554,17 +697,46 @@ export default function DeliveryChallan() {
 
       {/* CREATE / EDIT FORM */}
       {showForm && (
-        <Modal title={editingChallan ? `Edit Delivery Challan — ${editingChallan.dcNumber}` : 'New Delivery Challan'} onClose={() => { setShowForm(false); resetForm() }} wide>
+        <Modal 
+          title={editingChallan ? `Edit Delivery Challan — ${editingChallan.dcNumber}` : 'New Delivery Challan'} 
+          onClose={() => { setShowForm(false); resetForm() }} 
+          wide
+        >
           <form onSubmit={handleSubmit} className="space-y-5">
-            <label className="block">
-              <span className="text-xs font-medium text-slateink">Customer *</span>
-              <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} className="input mt-1" required>
-                <option value="">Select customer…</option>
-                {(customers || []).map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}{c.company ? ` — ${c.company}` : ''}</option>
-                ))}
-              </select>
-            </label>
+            {/* DC NUMBER - EDITABLE */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="block">
+                <span className="text-xs font-medium text-slateink">DC Number *</span>
+                <input
+                  type="text"
+                  value={dcNumber}
+                  onChange={(e) => setDcNumber(e.target.value)}
+                  className="input mt-1"
+                  placeholder="DC-YYYYMMDD-0001"
+                  required
+                />
+                <small className="text-xs text-slateink mt-1 block">
+                  Format: DC-YYYYMMDD-0001 (Auto-generated)
+                </small>
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-medium text-slateink">Customer *</span>
+                <select
+                  value={customerId}
+                  onChange={(e) => setCustomerId(e.target.value)}
+                  className="input mt-1"
+                  required
+                >
+                  <option value="">Select customer…</option>
+                  {(customers || []).map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}{c.company ? ` — ${c.company}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
 
             <div>
               <span className="text-xs font-medium text-slateink">Date</span>
@@ -643,12 +815,11 @@ export default function DeliveryChallan() {
 
 
 /* =================================================================
-   PRINTABLE DELIVERY CHALLAN - FIXED PDF
+   PRINTABLE DELIVERY CHALLAN - FIXED PREVIEW
    ================================================================= */
 
 export function PrintableModal({ doc, type, onClose }) {
   const printRef = useRef(null)
-  const [generatingPdf, setGeneratingPdf] = useState(false)
 
   /* ================================================================
      PRINT
@@ -728,50 +899,6 @@ ${content}
     setTimeout(() => { win.focus(); win.print(); }, 500)
   }
 
-  /* ================================================================
-     DOWNLOAD PDF - FIXED (NO CUT)
-  ================================================================ */
-
-  const handleDownloadPdf = async () => {
-    setGeneratingPdf(true)
-
-    try {
-      const element = document.getElementById('dc-print-content')
-
-      if (!element) {
-        alert('PDF content not found!')
-        setGeneratingPdf(false)
-        return
-      }
-
-      // FIX: Proper width and scale
-      const canvas = await html2canvas(element, {
-        scale: 3,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        width: 794,
-        height: 1123,
-        windowWidth: 794,
-        windowHeight: 1123
-      })
-
-      const imgData = canvas.toDataURL('image/png')
-      const pdf = new jsPDF('p', 'mm', 'a4')
-      const pdfWidth = 210
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width
-
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
-      pdf.save(`Delivery-Challan-${doc.dcNumber || 'DC'}.pdf`)
-
-    } catch (error) {
-      console.error('PDF generation error:', error)
-      alert('PDF generate nahi ho saka. Error: ' + error.message)
-    } finally {
-      setGeneratingPdf(false)
-    }
-  }
-
   const rawItems = Array.isArray(doc.items) ? doc.items : []
   const printableItems = rawItems.length > 0 ? rawItems : [{ name: '', qty: '', mac: '', serial: '' }]
 
@@ -808,10 +935,7 @@ ${content}
       {/* BUTTONS */}
       <div className="flex gap-3 mb-4 no-print">
         <button onClick={handlePrint} className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-ink text-white text-sm font-medium py-2.5 hover:bg-inkSoft">
-          <Printer size={16} /> Print
-        </button>
-        <button onClick={handleDownloadPdf} disabled={generatingPdf} className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-red-600 text-white text-sm font-medium py-2.5 hover:bg-red-700 disabled:opacity-60">
-          <Download size={16} /> {generatingPdf ? 'Generating...' : 'Download PDF'}
+          <Printer size={16} /> Print / Save as PDF
         </button>
         <button onClick={onClose} className="px-5 rounded-lg border border-line text-ink text-sm font-medium py-2.5 hover:bg-paper">
           Close
@@ -819,7 +943,7 @@ ${content}
       </div>
 
       {/* PRINT CONTENT */}
-      <div id="dc-print-content" ref={printRef} style={{ 
+      <div ref={printRef} style={{ 
         background: '#ffffff', 
         padding: '0', 
         overflow: 'hidden',
