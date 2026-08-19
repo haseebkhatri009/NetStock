@@ -168,7 +168,7 @@ export default function WarrantyValidator() {
 
       <form onSubmit={handleSearch} className="flex gap-2 mb-8">
         <div className="relative flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slateink" />
+          {/* <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slateink" /> */}
           <input
             value={mac}
             onChange={(e) => setMac(e.target.value)}
