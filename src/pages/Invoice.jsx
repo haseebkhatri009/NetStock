@@ -3152,20 +3152,6 @@ import Loader from '../components/Loader'
 
 const COMPANY_NAME = ''
 
-/*
-  LOGO PATH
-
-  Example:
-
-  public/logo.png
-
-  then use:
-
-  /logo.png
-
-  Baad mein apna actual logo path yahan daal dena.
-*/
-
 const COMPANY_LOGO = '../public/PN.png'
 
 
