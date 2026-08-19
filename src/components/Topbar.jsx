@@ -11,7 +11,8 @@ import {
   ShieldCheck,
   UserPlus,
   LogOut,
-  Radio
+  Radio,
+  FileSpreadsheet
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
@@ -21,6 +22,7 @@ const NAV = [
   { to: '/inventory', label: 'Inventory', icon: Boxes },
   { to: '/challan', label: 'Delivery Challan', icon: FileText },
   { to: '/invoice', label: 'Invoice', icon: Receipt },
+  { to: '/quotation', label: 'Quotation', icon: FileSpreadsheet },
   { to: '/warranty', label: 'Warranty Validator', icon: ShieldCheck },
   { to: '/create-user', label: 'Create User', icon: UserPlus }
 ]
