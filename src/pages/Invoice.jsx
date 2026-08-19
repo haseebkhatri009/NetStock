@@ -3152,7 +3152,7 @@ import Loader from '../components/Loader'
 
 const COMPANY_NAME = ''
 
-const COMPANY_LOGO = '../public/PN.png'
+const COMPANY_LOGO = '/PN.png'
 
 
 const COMPANY_ADDRESS = `
