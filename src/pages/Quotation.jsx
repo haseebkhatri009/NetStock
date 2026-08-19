@@ -2500,7 +2500,7 @@ export default function Quotation() {
                   <div className="items-editor">
                     <div className="item-editor-row" style={{
                       display: 'grid',
-                      gridTemplateColumns: '35px 1fr 80px 70px 90px 120px 70px',
+                      gridTemplateColumns: '35px 1fr 1fr 80px 70px 90px 120px 70px',
                       gap: '8px',
                       alignItems: 'end',
                       padding: '12px',
@@ -2513,14 +2513,15 @@ export default function Quotation() {
                         <span>#</span>
                       </div>
                       <div className="field">
-                        <input
+                        <textarea
                           value={currentItem.description}
                           onChange={(e) => setCurrentItem({
                             ...currentItem,
                             description: e.target.value
                           })}
-                          placeholder="Description"
-                          style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}
+                          placeholder="Description (press Enter for new line)"
+                          rows="2"
+                          style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', resize: 'vertical' }}
                         />
                       </div>
                       <div className="field">
@@ -2596,7 +2597,7 @@ export default function Quotation() {
                         items.map((item, index) => (
                           <div key={index} className="item-editor-row" style={{
                             display: 'grid',
-                            gridTemplateColumns: '35px 1fr 80px 70px 90px 120px 70px',
+                            gridTemplateColumns: '35px 1fr 1fr 80px 70px 90px 120px 70px',
                             gap: '8px',
                             alignItems: 'center',
                             padding: '10px 12px',
@@ -2610,7 +2611,14 @@ export default function Quotation() {
                               {index + 1}
                             </div>
                             <div className="field">
-                              <div style={{ padding: '8px 0', fontWeight: 500 }}>{item.description}</div>
+                              <div style={{ 
+                                padding: '8px 0', 
+                                fontWeight: 500,
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word'
+                              }}>
+                                {item.description}
+                              </div>
                             </div>
                             <div className="field">
                               <div style={{ padding: '8px 0' }}>{item.uom || 'PCS'}</div>
@@ -2790,14 +2798,15 @@ export default function Quotation() {
                 <label style={{ fontSize: '13px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '5px' }}>
                   Description *
                 </label>
-                <input
-                  type="text"
+                <textarea
                   value={editProduct.description}
                   onChange={(e) => setEditProduct({
                     ...editProduct,
                     description: e.target.value
                   })}
-                  style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}
+                  rows="3"
+                  placeholder="Product description (multi-line)"
+                  style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', resize: 'vertical' }}
                 />
               </div>
 
@@ -3204,7 +3213,9 @@ export default function Quotation() {
                           verticalAlign: 'middle',
                           height: '7mm',
                           borderTop: 'none',
-                          borderBottom: 'none'
+                          borderBottom: 'none',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word'
                         }}>{item.description}</td>
                         <td style={{
                           textAlign: 'center',
