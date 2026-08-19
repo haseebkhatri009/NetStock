@@ -103,7 +103,7 @@ export default function Inventory() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="font-display text-2xl font-semibold text-ink">Inventory</h1>
-          <p className="text-sm text-slateink mt-0.5">Stock ko category-wise track karein.</p>
+          <p className="text-sm text-slateink mt-0.5">Track your stock by category.</p>
         </div>
         <button
           onClick={() => setShowForm(true)}

@@ -79,8 +79,7 @@ export default function CreateUser() {
     <div className="max-w-2xl">
       <h1 className="font-display text-2xl font-semibold text-ink">Create User</h1>
       <p className="text-sm text-slateink mt-0.5 mb-6">
-        {company?.name} ke liye naya login banayein — wo user sign in karke same company data
-        dekh sakega.
+Create a new login for {company?.name} — the user can sign in and access the same company data.
       </p>
 
       <div className="bg-surface border border-line rounded-2xl shadow-card p-6 mb-8">

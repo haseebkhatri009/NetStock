@@ -121,7 +121,7 @@ export default function Dashboard() {
         <h1 className="font-display text-2xl font-semibold text-ink">
           Welcome back{company?.name ? `, ${company.name}` : ''}
         </h1>
-        <p className="text-sm text-slateink mt-0.5">Aapke business ka ek nazar mein overview.</p>
+        <p className="text-sm text-slateink mt-0.5">A quick overview of your business at a glance.</p>
       </div>
 
       {loading ? (

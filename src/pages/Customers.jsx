@@ -71,7 +71,7 @@ export default function Customers() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="font-display text-2xl font-semibold text-ink">Customers</h1>
-          <p className="text-sm text-slateink mt-0.5">Apne clients ka record yahan manage karein.</p>
+          <p className="text-sm text-slateink mt-0.5">Manage your client records here.</p>
         </div>
         <button
           onClick={() => setShowForm(true)}

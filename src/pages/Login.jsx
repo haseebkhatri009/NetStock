@@ -29,7 +29,6 @@ export default function Login() {
     <div className="min-h-screen w-full flex bg-ink">
       {/* Left brand panel */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center">
-        <div className="circuit-track" style={{ left: '50%' }} />
         <div className="relative z-10 max-w-md px-10 text-white">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal/20 text-teal mb-8">
             <Radio size={22} />
@@ -40,8 +39,8 @@ export default function Login() {
             tracked like a network.
           </h1>
           <p className="mt-4 text-white/50 text-sm leading-relaxed">
-            Customers, stock, delivery challans, invoices aur MAC-address based warranty
-            tracking — sab ek jagah, aapki company ke liye.
+            Customers, stock, delivery challans, invoices and MAC-address based warranty
+            tracking — all in one place, for your company.
           </p>
           <div className="mt-10 flex items-center gap-3 text-white/40 text-xs">
             <span className="h-1.5 w-1.5 rounded-full bg-teal pulse-ring" />
@@ -61,7 +60,7 @@ export default function Login() {
           </div>
 
           <h2 className="font-display text-2xl font-semibold text-ink">Welcome back</h2>
-          <p className="text-sm text-slateink mt-1">Apni company account me login karein.</p>
+          <p className="text-sm text-slateink mt-1">Login to your company account.</p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
             <div>
@@ -104,15 +103,15 @@ export default function Login() {
               disabled={busy}
               className="w-full flex items-center justify-center gap-2 rounded-lg bg-ink text-white text-sm font-medium py-2.5 hover:bg-inkSoft transition-colors disabled:opacity-60"
             >
-              {busy ? 'Signing in…' : 'Login'}
+              {busy ? 'Signing in...' : 'Login'}
               {!busy && <ArrowRight size={16} />}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-slateink">
-            Company account nahi hai?{' '}
+            Don't have a company account?{' '}
             <Link to="/signup" className="text-teal-dark font-medium">
-              Sign up karein
+              Sign up
             </Link>
           </p>
         </div>
@@ -123,11 +122,11 @@ export default function Login() {
 
 function friendlyError(code) {
   const map = {
-    'auth/invalid-credential': 'Email ya password ghalat hai.',
-    'auth/user-not-found': 'Is email se koi account nahi mila.',
-    'auth/wrong-password': 'Password ghalat hai.',
-    'auth/invalid-email': 'Email format sahi nahi hai.',
-    'auth/too-many-requests': 'Bohat zyada attempts. Thori dair baad try karein.'
+    'auth/invalid-credential': 'Invalid email or password.',
+    'auth/user-not-found': 'No account found with this email.',
+    'auth/wrong-password': 'Incorrect password.',
+    'auth/invalid-email': 'Please enter a valid email address.',
+    'auth/too-many-requests': 'Too many attempts. Please try again later.'
   }
-  return map[code] || 'Login nahi ho saka. Dobara koshish karein.'
+  return map[code] || 'Login failed. Please try again.'
 }

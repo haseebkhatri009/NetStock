@@ -4199,7 +4199,7 @@ export default function Invoice() {
             </h1>
 
             <p className="text-sm text-slateink mt-0.5">
-              Product name, quantity aur price dekar invoice banayein.
+              Enter the product name, quantity, and price to create an invoice.
             </p>
 
           </div>

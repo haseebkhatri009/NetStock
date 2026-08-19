@@ -43,7 +43,7 @@ export default function WarrantyValidator() {
     <div className="max-w-2xl">
       <h1 className="font-display text-2xl font-semibold text-ink">Warranty Validator</h1>
       <p className="text-sm text-slateink mt-0.5 mb-6">
-        Device ka MAC address dalein aur uski entry date, sale date aur warranty status dekhein.
+        Enter the device's MAC address to view its entry date, sale date, and warranty status.
       </p>
 
       <form onSubmit={handleSearch} className="flex gap-2 mb-8">

@@ -613,7 +613,7 @@ export default function DeliveryChallan() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="font-display text-2xl font-semibold text-ink">Delivery Challan</h1>
-          <p className="text-sm text-slateink mt-0.5">DC banayein — stock automatically deduct hoga.</p>
+          <p className="text-sm text-slateink mt-0.5">Create a DC — stock will be automatically deducted..</p>
         </div>
         <button onClick={openNewChallan} className="flex items-center gap-2 rounded-lg bg-ink text-white text-sm font-medium px-4 py-2.5 hover:bg-inkSoft transition-colors self-start">
           <Plus size={16} /> New Challan
