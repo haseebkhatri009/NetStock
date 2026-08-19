@@ -20,18 +20,28 @@ const NAV = [
   { to: '/challan', label: 'Delivery Challan', icon: FileText },
   { to: '/invoice', label: 'Invoice', icon: Receipt },
   { to: '/quotation', label: 'Quotation', icon: FileSpreadsheet },
-  { to: '/warranty', label: 'Warranty Validator', icon: ShieldCheck },
+  { to: '/warranty', label: 'Warranty Validator', icon: ShieldCheck }
+]
+
+// Owner only nav items
+const OWNER_NAV = [
   { to: '/create-user', label: 'Create User', icon: UserPlus }
 ]
 
 export default function Sidebar() {
-  const { logout, company, profile } = useAuth()
+  const { logout, company, profile, user } = useAuth()
   const navigate = useNavigate()
 
   async function handleLogout() {
     await logout()
     navigate('/login')
   }
+
+  // Check if user is owner - from profile.role or user.role
+  const isOwner = profile?.role === 'owner' || user?.role === 'owner'
+
+  // Combine nav items based on role
+  const allNav = isOwner ? [...NAV, ...OWNER_NAV] : NAV
 
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col bg-ink text-white shrink-0">
@@ -50,7 +60,7 @@ export default function Sidebar() {
       <nav className="relative flex-1 px-4 pt-2">
         <div className="circuit-track" />
         <ul className="space-y-1">
-          {NAV.map(({ to, label, icon: Icon, end }) => (
+          {allNav.map(({ to, label, icon: Icon, end }) => (
             <li key={to} className="circuit-node">
               <NavLink
                 to={to}
@@ -81,11 +91,15 @@ export default function Sidebar() {
       <div className="px-4 py-4 border-t border-white/10">
         <div className="flex items-center gap-2 px-1 pb-3">
           <div className="h-8 w-8 rounded-full bg-teal/20 text-teal flex items-center justify-center text-xs font-semibold uppercase">
-            {profile?.email?.[0] || '?'}
+            {profile?.email?.[0] || user?.email?.[0] || '?'}
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-medium text-white/80 truncate">{profile?.email}</p>
-            <p className="text-[10px] uppercase tracking-wide text-white/35">{profile?.role}</p>
+            <p className="text-xs font-medium text-white/80 truncate">
+              {profile?.email || user?.email || 'User'}
+            </p>
+            <p className="text-[10px] uppercase tracking-wide text-white/35">
+              {profile?.role || user?.role || 'staff'}
+            </p>
           </div>
         </div>
         <button

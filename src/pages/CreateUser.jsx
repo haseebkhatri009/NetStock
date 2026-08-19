@@ -6,15 +6,19 @@ import { db, secondaryAuth } from '../firebase'
 import { useAuth } from '../context/AuthContext'
 import { formatDate } from '../utils/helpers'
 import Loader from '../components/Loader'
+import { Navigate } from 'react-router-dom'
 
 export default function CreateUser() {
-  const { companyId, company } = useAuth()
+  const { companyId, company, profile, user } = useAuth()
   const [team, setTeam] = useState(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [busy, setBusy] = useState(false)
+
+  // Check if user is owner
+  const isOwner = profile?.role === 'owner' || user?.role === 'owner'
 
   useEffect(() => {
     if (!companyId) return
@@ -36,6 +40,11 @@ export default function CreateUser() {
     return () => unsub()
   }, [companyId])
 
+  // If user is not owner, redirect to dashboard
+  if (!isOwner) {
+    return <Navigate to="/" replace />
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
@@ -47,7 +56,7 @@ export default function CreateUser() {
     setBusy(true)
     try {
       // Use a secondary, isolated Firebase Auth instance so this doesn't
-      // sign the current admin out of their own session.
+      // sign the current owner out of their own session.
       const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password)
       const newUid = cred.user.uid
 
@@ -65,7 +74,7 @@ export default function CreateUser() {
 
       await signOut(secondaryAuth)
 
-      setSuccess(`Naya login ban gaya: ${email}. Ye ab isi company ka data access kar sakega.`)
+      setSuccess(`Naya login ban gaya: ${email}. Ye ab isi company ka data access kar sakta hai.`)
       setEmail('')
       setPassword('')
     } catch (err) {
@@ -79,7 +88,7 @@ export default function CreateUser() {
     <div className="max-w-2xl">
       <h1 className="font-display text-2xl font-semibold text-ink">Create User</h1>
       <p className="text-sm text-slateink mt-0.5 mb-6">
-Create a new login for {company?.name} — the user can sign in and access the same company data.
+        Create a new login for {company?.name} — the user can sign in and access the same company data.
       </p>
 
       <div className="bg-surface border border-line rounded-2xl shadow-card p-6 mb-8">
@@ -88,7 +97,7 @@ Create a new login for {company?.name} — the user can sign in and access the s
             <label className="block">
               <span className="text-xs font-medium text-slateink">Email</span>
               <div className="mt-1 relative">
-                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slateink" />
+                {/* <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slateink" /> */}
                 <input
                   type="email"
                   required
@@ -102,7 +111,7 @@ Create a new login for {company?.name} — the user can sign in and access the s
             <label className="block">
               <span className="text-xs font-medium text-slateink">Password</span>
               <div className="mt-1 relative">
-                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slateink" />
+                {/* <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slateink" /> */}
                 <input
                   type="password"
                   required
@@ -165,9 +174,9 @@ Create a new login for {company?.name} — the user can sign in and access the s
 
 function friendlyError(code) {
   const map = {
-    'auth/email-already-in-use': 'Ye email pehle se registered hai.',
-    'auth/invalid-email': 'Email format sahi nahi hai.',
-    'auth/weak-password': 'Password kamzor hai.'
+    'auth/email-already-in-use': 'This email is already registered.',
+    'auth/invalid-email': 'Invalid email format.',
+    'auth/weak-password': 'Password is too weak.'
   }
-  return map[code] || 'User create nahi ho saka. Dobara koshish karein.'
+  return map[code] || 'Failed to create user. Please try again.'
 }

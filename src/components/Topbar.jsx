@@ -16,26 +16,37 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
-const NAV = [
+// Base navigation for everyone
+const BASE_NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/customers', label: 'Customers', icon: Users },
   { to: '/inventory', label: 'Inventory', icon: Boxes },
   { to: '/challan', label: 'Delivery Challan', icon: FileText },
   { to: '/invoice', label: 'Invoice', icon: Receipt },
   { to: '/quotation', label: 'Quotation', icon: FileSpreadsheet },
-  { to: '/warranty', label: 'Warranty Validator', icon: ShieldCheck },
+  { to: '/warranty', label: 'Warranty Validator', icon: ShieldCheck }
+]
+
+// Owner only nav items
+const OWNER_NAV = [
   { to: '/create-user', label: 'Create User', icon: UserPlus }
 ]
 
 export default function Topbar({ title }) {
   const [open, setOpen] = useState(false)
-  const { logout, company } = useAuth()
+  const { logout, company, profile, user } = useAuth()
   const navigate = useNavigate()
 
   async function handleLogout() {
     await logout()
     navigate('/login')
   }
+
+  // Check if user is owner
+  const isOwner = profile?.role === 'owner' || user?.role === 'owner'
+
+  // Combine nav items based on role
+  const NAV = isOwner ? [...BASE_NAV, ...OWNER_NAV] : BASE_NAV
 
   return (
     <>
