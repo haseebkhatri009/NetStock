@@ -313,7 +313,7 @@ export default function Customers() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('Ye customer delete karna hai?')) return
+    if (!confirm('Are You sure to delete this customer?')) return
     await remove(ref(db, `companies/${companyId}/customers/${id}`))
   }
 

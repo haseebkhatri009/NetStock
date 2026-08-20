@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
-import { ref, push, onValue, update, get, set } from 'firebase/database'
+import { ref, push, onValue, update, get, set, remove } from 'firebase/database'
 import {
   Plus,
   Trash2,
@@ -27,7 +27,7 @@ import Loader from '../components/Loader'
    ============================================================ */
 
 const COMPANY_NAME = 'Pearl Networks'
-const COMPANY_LOGO = '/logo.png'
+const COMPANY_LOGO = '/PN.png'
 const COMPANY_ADDRESS = `
 KCHS, Gohar Chamber, Office # 304,
 Shahrah-e-Faisal, near Duty Free Shop,
@@ -297,6 +297,75 @@ export default function DeliveryChallan() {
     setPickStockId('')
     setPickQty(1)
     setShowForm(true)
+  }
+
+
+  /* ============================================================
+     DELETE CHALLAN
+     ============================================================ */
+
+  async function handleDeleteChallan(id) {
+    if (!confirm('Are you sure you want to delete this Delivery Challan?')) return
+    
+    try {
+      // First, get the challan data to restore stock
+      const challanRef = ref(db, `companies/${companyId}/challans/${id}`)
+      const snap = await get(challanRef)
+      
+      if (!snap.exists()) {
+        setError('Challan not found')
+        return
+      }
+      
+      const challan = snap.val()
+      const oldItems = challan.items || []
+      
+      // Restore stock for each item
+      const updates = {}
+      
+      for (const item of oldItems) {
+        if (!item.stockId) continue
+        
+        const stockRef = ref(db, `companies/${companyId}/stock/${item.stockId}`)
+        const stockSnap = await get(stockRef)
+        
+        if (!stockSnap.exists()) continue
+        
+        const stockItem = stockSnap.val()
+        
+        // Check if it's a serialized item (MAC or Serial)
+        if (stockItem.mac || stockItem.serial || item.mac || item.serial) {
+          // Restore serialized item
+          updates[`companies/${companyId}/stock/${item.stockId}/status`] = 'available'
+          updates[`companies/${companyId}/stock/${item.stockId}/soldTo`] = null
+          updates[`companies/${companyId}/stock/${item.stockId}/soldToId`] = null
+          updates[`companies/${companyId}/stock/${item.stockId}/soldDate`] = null
+          updates[`companies/${companyId}/stock/${item.stockId}/dcNumber`] = null
+        } else {
+          // Restore quantity for bulk items
+          const currentQty = Number(stockItem.quantity) || 0
+          const restoredQty = currentQty + (Number(item.qty) || 0)
+          
+          updates[`companies/${companyId}/stock/${item.stockId}/quantity`] = restoredQty
+          updates[`companies/${companyId}/stock/${item.stockId}/status`] = 'available'
+          updates[`companies/${companyId}/stock/${item.stockId}/soldTo`] = null
+          updates[`companies/${companyId}/stock/${item.stockId}/soldToId`] = null
+          updates[`companies/${companyId}/stock/${item.stockId}/soldDate`] = null
+          updates[`companies/${companyId}/stock/${item.stockId}/dcNumber`] = null
+        }
+      }
+      
+      // Delete the challan
+      updates[`companies/${companyId}/challans/${id}`] = null
+      
+      await update(ref(db), updates)
+      
+      setSuccess('Delivery Challan deleted successfully!')
+      
+    } catch (err) {
+      console.error('Delete error:', err)
+      setError('Failed to delete challan')
+    }
   }
 
 
@@ -613,7 +682,7 @@ export default function DeliveryChallan() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="font-display text-2xl font-semibold text-ink">Delivery Challan</h1>
-          <p className="text-sm text-slateink mt-0.5">Create a DC — stock will be automatically deducted..</p>
+          <p className="text-sm text-slateink mt-0.5">Create a DC — stock will be automatically deducted.</p>
         </div>
         <button onClick={openNewChallan} className="flex items-center gap-2 rounded-lg bg-ink text-white text-sm font-medium px-4 py-2.5 hover:bg-inkSoft transition-colors self-start">
           <Plus size={16} /> New Challan
@@ -684,6 +753,14 @@ export default function DeliveryChallan() {
                           className="flex items-center gap-1.5 text-red-600 text-xs font-medium hover:text-red-800"
                         >
                           <Download size={14} /> PDF
+                        </button>
+
+                        {/* DELETE BUTTON */}
+                        <button
+                          onClick={() => handleDeleteChallan(c.id)}
+                          className="flex items-center gap-1.5 text-coral text-xs font-medium hover:text-red-700"
+                        >
+                          <Trash2 size={14} /> Delete
                         </button>
                       </div>
                     </td>
@@ -815,7 +892,7 @@ export default function DeliveryChallan() {
 
 
 /* =================================================================
-   PRINTABLE DELIVERY CHALLAN - FIXED PREVIEW
+   PRINTABLE DELIVERY CHALLAN
    ================================================================= */
 
 export function PrintableModal({ doc, type, onClose }) {
@@ -873,7 +950,7 @@ body { font-family: Arial, Helvetica, sans-serif; color: #111; background: #fff;
 .dc-product-table th, .dc-product-table td { border: 1px solid #111; padding: 1.8mm 2mm; font-size: 10.5px; vertical-align: middle; }
 .dc-product-table th { font-weight: 700; text-align: center; }
 .dc-product-table td { text-align: center; min-height: 7mm; }
-.dc-product-name { text-align: left !important; font-weight: 500; }
+.dc-product-name { text-align: center !important; font-weight: 500; }
 .dc-signatures { margin-top: 18mm; width: 100%; font-size: 11px; }
 .dc-signature-top { display: grid; grid-template-columns: 1fr 1fr; column-gap: 20mm; margin-bottom: 7mm; }
 .dc-signature-heading { font-weight: 500; white-space: nowrap; }
@@ -1028,7 +1105,7 @@ ${content}
                   return (
                     <tr key={`${item.stockId || item.name}-${index}`}>
                       <td style={{ border: '1px solid #111', padding: '1.8mm 2mm', fontSize: '10.5px', textAlign: 'center', verticalAlign: 'middle' }}>{index + 1}</td>
-                      <td className="dc-product-name" style={{ border: '1px solid #111', padding: '1.8mm 2mm', fontSize: '10.5px', textAlign: 'left', verticalAlign: 'middle', fontWeight: 500 }}>{item.name}</td>
+                      <td className="dc-product-name" style={{ border: '1px solid #111', padding: '1.8mm 2mm', fontSize: '10.5px', textAlign: 'center', verticalAlign: 'middle', fontWeight: 500 }}>{item.name}</td>
                       <td style={{ border: '1px solid #111', padding: '1.8mm 2mm', fontSize: '10.5px', textAlign: 'center', verticalAlign: 'middle' }}>{item.qty}</td>
                       <td style={{ border: '1px solid #111', padding: '1.8mm 2mm', fontSize: '10.5px', textAlign: 'center', verticalAlign: 'middle' }}>
                         {Array.from({ length: maxLines }).map((_, macIndex) => (

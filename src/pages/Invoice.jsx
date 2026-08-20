@@ -3119,9 +3119,8 @@
 
 
 
-
 import { useEffect, useMemo, useState, useRef } from 'react'
-import { ref, push, onValue, update, get, set } from 'firebase/database'
+import { ref, push, onValue, update, get, set, remove } from 'firebase/database'
 import {
   Plus,
   Trash2,
@@ -3300,6 +3299,14 @@ export default function Invoice() {
   const [saving, setSaving] = useState(false)
 
   const [error, setError] = useState('')
+
+  /* ============================================================
+     DELETE CONFIRMATION STATE
+     ============================================================ */
+
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
+
+  const [deleting, setDeleting] = useState(false)
 
   /* ============================================================
      EDIT PRODUCT STATE
@@ -3624,6 +3631,49 @@ export default function Invoice() {
       qty: 1,
       price: 0
     })
+
+  }
+
+
+  /* ============================================================
+     DELETE INVOICE
+     ============================================================ */
+
+  async function handleDeleteInvoice() {
+
+    if (!companyId || !deleteConfirm) {
+      return
+    }
+
+    setDeleting(true)
+
+    try {
+
+      const invoiceRef = ref(
+        db,
+        `companies/${companyId}/invoices/${deleteConfirm.id}`
+      )
+
+      await remove(invoiceRef)
+
+      setDeleteConfirm(null)
+
+    } catch (err) {
+
+      console.error(
+        'Invoice delete error:',
+        err
+      )
+
+      alert(
+        'Invoice delete nahi ho saka. Dobara koshish karein.'
+      )
+
+    } finally {
+
+      setDeleting(false)
+
+    }
 
   }
 
@@ -4378,6 +4428,23 @@ export default function Invoice() {
 
                             </button>
 
+
+                            {/* DELETE BUTTON */}
+                            <button
+                              onClick={() =>
+                                setDeleteConfirm(invoice)
+                              }
+                              className="inline-flex items-center gap-1.5 text-xs font-medium text-coral hover:text-red-700"
+                            >
+
+                              <Trash2
+                                size={13}
+                              />
+
+                              Delete
+
+                            </button>
+
                           </div>
 
                         </td>
@@ -4836,6 +4903,109 @@ export default function Invoice() {
             setPreview(null)
           }
         />
+
+      )}
+
+
+      {/* ==========================================================
+          DELETE CONFIRMATION MODAL
+          ========================================================== */}
+
+      {deleteConfirm && (
+
+        <div className="fixed inset-0 z-[99999] bg-black/60 flex items-center justify-center p-4">
+
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+
+            <div className="flex items-center justify-between mb-4">
+
+              <h3 className="text-lg font-semibold text-ink">
+                Delete Invoice
+              </h3>
+
+              <button
+                onClick={() =>
+                  setDeleteConfirm(null)
+                }
+                className="text-slateink hover:text-ink"
+              >
+
+                <X
+                  size={20}
+                />
+
+              </button>
+
+            </div>
+
+
+            <div className="space-y-4">
+
+              <p className="text-sm text-ink">
+                Kya aap ye invoice delete karna chahte hain?
+              </p>
+
+              <div className="bg-paper rounded-lg p-3 text-sm">
+
+                <p className="font-medium text-ink">
+                  {deleteConfirm.invoiceNumber}
+                </p>
+
+                <p className="text-slateink text-xs">
+                  {deleteConfirm.customerName}
+                </p>
+
+                <p className="text-slateink text-xs">
+                  Total: Rs {currency(deleteConfirm.total || 0)}
+                </p>
+
+              </div>
+
+
+              <div className="flex gap-3">
+
+                <button
+                  onClick={() =>
+                    setDeleteConfirm(null)
+                  }
+                  className="flex-1 rounded-lg border border-line text-ink text-sm font-medium py-2.5 hover:bg-paper transition-colors"
+                >
+
+                  Cancel
+
+                </button>
+
+
+                <button
+                  onClick={
+                    handleDeleteInvoice
+                  }
+                  disabled={
+                    deleting
+                  }
+                  className="flex-1 rounded-lg bg-coral text-white text-sm font-medium py-2.5 hover:bg-red-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+
+                  {deleting ? (
+                    'Deleting…'
+                  ) : (
+                    <>
+                      <Trash2
+                        size={16}
+                      />
+                      Delete
+                    </>
+                  )}
+
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
 
       )}
 

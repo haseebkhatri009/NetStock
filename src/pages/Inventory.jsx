@@ -721,8 +721,8 @@ export default function Inventory() {
       ) : filtered.length === 0 ? (
         <div className="border border-dashed border-line rounded-2xl py-16 flex flex-col items-center justify-center text-center">
           <Boxes className="text-slateink mb-3" size={28} />
-          <p className="font-medium text-ink">Koi stock item nahi mila</p>
-          <p className="text-sm text-slateink mt-1">Naya product add karein.</p>
+          <p className="font-medium text-ink">No stock items found.</p>
+          <p className="text-sm text-slateink mt-1">Add new Product.</p>
         </div>
       ) : (
         <div className="bg-surface rounded-2xl border border-line shadow-card overflow-hidden">
