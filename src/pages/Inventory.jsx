@@ -1997,8 +1997,14 @@
 
 
 
+
+
+
+
+
+//demo dc
 import { useEffect, useMemo, useState, useRef } from 'react'
-import { ref, push, onValue, remove, get } from 'firebase/database'
+import { ref, push, onValue, remove, get, update } from 'firebase/database'
 import {
   Plus,
   Boxes,
@@ -2009,7 +2015,9 @@ import {
   Package,
   PackageCheck,
   PackageX,
-  Layers
+  Layers,
+  RotateCcw,
+  Eye
 } from 'lucide-react'
 import { db } from '../firebase'
 import { useAuth } from '../context/AuthContext'
@@ -2034,6 +2042,7 @@ const PRODUCT_NAMES = [
   'GXP2200',
   'GBX20',
   'GRP2601P',
+  'GRP2601W',
   'GRP2602P',
   'GRP2603P',
   'GRP2604P',
@@ -2042,7 +2051,7 @@ const PRODUCT_NAMES = [
   'GRP2614P',
   'GRP2615',
   'GRP2616P',
-  'GRP2624P',
+  'GRP2624',
   'GRP2634P',
   'GWN7600',
   'GWN7605',
@@ -2130,6 +2139,9 @@ const PRODUCT_IMAGES = {
   GRP2601P:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIQsz_pSIKsZ753LoC-_bjHW4dUxI9E3yPgOadLwLOPA&s=10',
 
+  GRP2601W:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIQsz_pSIKsZ753LoC-_bjHW4dUxI9E3yPgOadLwLOPA&s=10',
+
   GRP2602P:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT-EY1nPb7QvxbUBj1aalJDgwaip1-e66yIphKi7p5jpA&s=10',
 
@@ -2140,7 +2152,7 @@ const PRODUCT_IMAGES = {
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSExtN8GudHcvN2juwCJY74c-eUXtmo9r9YzBvmPgX9lA&s=10',
 
   GRP2612P:
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRULPF9teoDAwkSM3CAaURW9jfcJTiAvFubBBZ2PpxG2w&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRULPF9teDAwkSM3CAaURW9jfcJTiAvFubBBZ2PpxG2w&s=10',
 
   GRP2613P:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRwZLwZVF-VyE_WdrdJ3nc7HeHLOcnAobSJi8XNHNV7Zw&s=10',
@@ -2154,7 +2166,7 @@ const PRODUCT_IMAGES = {
   GRP2616P:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTdGCuPvZycn4cC5fT7XVOoGGq8HkCsTKfBenkolb47AQ&s=10',
 
-  GRP2624P:
+  GRP2624:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKNU81e5b0sqm6Tj1-D-95A_ttt1hWZsjNFEDi3OjGIQ&s=10',
 
   GRP2634P:
@@ -2245,8 +2257,11 @@ const PRODUCT_IMAGES = {
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQnEuNFLOWN35x3_3Hr-3MO701DiLhSwfysm4GXrzw2xA&s=10',
 
   WF720: '/images/wf720.png',
+
   HT802: '/images/ht802.png',
+
   HT812: '/images/ht812.png',
+
   HT813: '/images/ht813.png',
 
   HT814:
@@ -2287,11 +2302,19 @@ const PRODUCT_IMAGES = {
 }
 
 /* ============================================================
-   HELPER FUNCTION
+   HELPER
    ============================================================ */
 
 function getProductImage(productName) {
   return PRODUCT_IMAGES[productName] || null
+}
+
+/* ============================================================
+   TODAY DATE
+   ============================================================ */
+
+function getTodayDate() {
+  return new Date().toISOString().slice(0, 10)
 }
 
 /* ============================================================
@@ -2306,7 +2329,8 @@ const emptyForm = {
   mac: '',
   serial: '',
   description: '',
-  quantity: 1
+  quantity: 1,
+  addedDate: getTodayDate()
 }
 
 /* ============================================================
@@ -2318,6 +2342,7 @@ export default function Inventory() {
 
   const [stock, setStock] = useState(null)
   const [form, setForm] = useState(emptyForm)
+  const [demoChallans, setDemoChallans] = useState(null)
 
   const [showForm, setShowForm] = useState(false)
   const [activeCat, setActiveCat] = useState('All')
@@ -2327,9 +2352,11 @@ export default function Inventory() {
   const [saving, setSaving] = useState(false)
   const [showGroupedModal, setShowGroupedModal] = useState(false)
   const [macError, setMacError] = useState('')
+  const [returning, setReturning] = useState(false)
+  const [showDemoDetails, setShowDemoDetails] = useState(null)
 
   /* ============================================================
-     SEARCHABLE DROPDOWN STATES
+     SEARCHABLE DROPDOWN
      ============================================================ */
 
   const [productSearch, setProductSearch] = useState('')
@@ -2340,7 +2367,7 @@ export default function Inventory() {
   const inputRef = useRef(null)
 
   /* ============================================================
-     OWNER CHECK
+     OWNER
      ============================================================ */
 
   const isOwner = profile?.role === 'owner'
@@ -2362,7 +2389,7 @@ export default function Inventory() {
   }, [productSearch])
 
   /* ============================================================
-     CLOSE DROPDOWN WHEN CLICKING OUTSIDE
+     CLOSE DROPDOWN
      ============================================================ */
 
   useEffect(() => {
@@ -2375,7 +2402,10 @@ export default function Inventory() {
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener(
+      'mousedown',
+      handleClickOutside
+    )
 
     return () => {
       document.removeEventListener(
@@ -2386,7 +2416,7 @@ export default function Inventory() {
   }, [])
 
   /* ============================================================
-     LOAD STOCK FROM FIREBASE
+     LOAD STOCK
      ============================================================ */
 
   useEffect(() => {
@@ -2416,8 +2446,50 @@ export default function Inventory() {
         setStock(list)
       },
       (err) => {
-        console.error('stock read failed:', err)
+        console.error(
+          'stock read failed:',
+          err
+        )
+
         setStock([])
+      }
+    )
+
+    return () => unsub()
+  }, [companyId])
+
+  /* ============================================================
+     LOAD DEMO CHALLANS
+     ============================================================ */
+
+  useEffect(() => {
+    if (!companyId) return
+
+    const demoChallansRef = ref(
+      db,
+      `companies/${companyId}/demo-challans`
+    )
+
+    const unsub = onValue(
+      demoChallansRef,
+      (snap) => {
+        const val = snap.val() || {}
+
+        const list = Object.entries(val)
+          .map(([id, challan]) => ({
+            id,
+            ...challan
+          }))
+
+        setDemoChallans(list)
+      },
+      (err) => {
+        console.error(
+          'demo challans read failed:',
+          err
+        )
+
+        setDemoChallans([])
       }
     )
 
@@ -2437,7 +2509,10 @@ export default function Inventory() {
       }
     })
 
-    return ['All', ...Array.from(dynamic)]
+    return [
+      'All',
+      ...Array.from(dynamic)
+    ]
   }, [stock])
 
   /* ============================================================
@@ -2455,9 +2530,15 @@ export default function Inventory() {
       let matchesStatus = true
 
       if (statusFilter === 'In Stock') {
-        matchesStatus = s.status !== 'sold'
+        matchesStatus =
+          s.status !== 'sold' &&
+          s.status !== 'demo'
       } else if (statusFilter === 'Sold') {
-        matchesStatus = s.status === 'sold'
+        matchesStatus =
+          s.status === 'sold'
+      } else if (statusFilter === 'Demo') {
+        matchesStatus =
+          s.status === 'demo'
       }
 
       const q = search.toLowerCase()
@@ -2499,6 +2580,7 @@ export default function Inventory() {
           totalQty: 0,
           inStockQty: 0,
           soldQty: 0,
+          demoQty: 0,
           categories: new Set(),
           items: []
         }
@@ -2508,10 +2590,12 @@ export default function Inventory() {
 
       grouped[name].totalQty += qty
 
-      if (s.status !== 'sold') {
-        grouped[name].inStockQty += qty
-      } else {
+      if (s.status === 'demo') {
+        grouped[name].demoQty += qty
+      } else if (s.status === 'sold') {
         grouped[name].soldQty += qty
+      } else {
+        grouped[name].inStockQty += qty
       }
 
       grouped[name].categories.add(
@@ -2536,24 +2620,32 @@ export default function Inventory() {
       return {
         total: 0,
         inStock: 0,
-        sold: 0
+        sold: 0,
+        demo: 0
       }
     }
 
     const total = stock.length
 
     const inStock = stock.filter(
-      (s) => s.status !== 'sold'
+      (s) =>
+        s.status !== 'sold' &&
+        s.status !== 'demo'
     ).length
 
     const sold = stock.filter(
       (s) => s.status === 'sold'
     ).length
 
+    const demo = stock.filter(
+      (s) => s.status === 'demo'
+    ).length
+
     return {
       total,
       inStock,
-      sold
+      sold,
+      demo
     }
   }, [stock])
 
@@ -2638,6 +2730,141 @@ export default function Inventory() {
   }
 
   /* ============================================================
+     GET DEMO DETAILS
+     ============================================================ */
+
+  const getDemoDetails = (stockItem) => {
+    if (
+      !demoChallans ||
+      !stockItem.ddcNumber
+    ) {
+      return {
+        customerName:
+          stockItem.demoTo || '—',
+
+        customerCompany:
+          stockItem.demoCompany || '—',
+
+        customerPhone:
+          stockItem.demoPhone || '—'
+      }
+    }
+
+    const challan = demoChallans.find(
+      (c) =>
+        c.ddcNumber ===
+        stockItem.ddcNumber
+    )
+
+    if (challan) {
+      return {
+        customerName:
+          challan.customerName ||
+          stockItem.demoTo ||
+          '—',
+
+        customerCompany:
+          challan.customerCompany ||
+          stockItem.demoCompany ||
+          '—',
+
+        customerPhone:
+          challan.customerPhone ||
+          stockItem.demoPhone ||
+          '—'
+      }
+    }
+
+    return {
+      customerName:
+        stockItem.demoTo || '—',
+
+      customerCompany:
+        stockItem.demoCompany || '—',
+
+      customerPhone:
+        stockItem.demoPhone || '—'
+    }
+  }
+
+  /* ============================================================
+     RETURN DEMO ITEM
+     ============================================================ */
+
+  async function handleReturnDemo(stockId) {
+    if (
+      !confirm(
+        'Are you sure you want to return this demo item to stock?'
+      )
+    ) {
+      return
+    }
+
+    setReturning(true)
+
+    try {
+      const stockRef = ref(
+        db,
+        `companies/${companyId}/stock/${stockId}`
+      )
+
+      const snap = await get(stockRef)
+
+      if (!snap.exists()) {
+        alert('Stock item not found')
+        return
+      }
+
+      const stockItem = snap.val()
+
+      await update(stockRef, {
+        status: 'available',
+        demoTo: null,
+        demoToId: null,
+        demoDate: null,
+        ddcNumber: null,
+        demoCompany: null,
+        demoPhone: null
+      })
+
+      if (stockItem.ddcNumber) {
+        const challan =
+          demoChallans?.find(
+            (c) =>
+              c.ddcNumber ===
+              stockItem.ddcNumber
+          )
+
+        if (challan) {
+          await update(
+            ref(
+              db,
+              `companies/${companyId}/demo-challans/${challan.id}`
+            ),
+            {
+              status: 'returned',
+              returnedAt: Date.now()
+            }
+          )
+        }
+      }
+
+      alert(
+        'Demo item returned to stock successfully!'
+      )
+    } catch (error) {
+      console.error(
+        'Error returning demo:',
+        error
+      )
+
+      alert('Failed to return demo item')
+    } finally {
+      setReturning(false)
+    }
+  }
+
+  /* ============================================================
      SUBMIT
      ============================================================ */
 
@@ -2671,10 +2898,21 @@ export default function Inventory() {
       alert(
         'Please select a product name and category'
       )
+
       return
     }
 
-    /* Check MAC before saving */
+    /* DATE VALIDATION */
+
+    if (!form.addedDate) {
+      alert(
+        'Please select Date of Entry'
+      )
+
+      return
+    }
+
+    /* MAC CHECK */
 
     if (form.mac) {
       const exists =
@@ -2710,28 +2948,55 @@ export default function Inventory() {
 
       await push(stockRef, {
         category,
+
         name: finalProductName,
+
         mac: mac || null,
+
         serial:
           form.serial.trim() || null,
+
         description:
           form.description.trim() ||
           null,
+
         quantity: qty,
+
         status: 'in-stock',
-        addedDate:
-          new Date()
-            .toISOString()
-            .slice(0, 10),
+
+        /*
+         * USER SELECTED DATE
+         */
+        addedDate: form.addedDate,
+
+        /*
+         * ACTUAL RECORD CREATION TIME
+         */
         createdAt: Date.now()
       })
 
-      setForm(emptyForm)
+      /* RESET FORM */
+
+      setForm({
+        ...emptyForm,
+        addedDate: getTodayDate()
+      })
+
       setProductSearch('')
       setShowDropdown(false)
       setIsCustomSelected(false)
       setMacError('')
       setShowForm(false)
+
+    } catch (error) {
+      console.error(
+        'Error adding stock:',
+        error
+      )
+
+      alert(
+        'Failed to add product to inventory'
+      )
     } finally {
       setSaving(false)
     }
@@ -2771,20 +3036,7 @@ export default function Inventory() {
 
     setProductSearch(name)
     setIsCustomSelected(false)
-
-    /*
-      IMPORTANT FIX:
-
-      Product select karte hi dropdown close.
-    */
-
     setShowDropdown(false)
-
-    /*
-      Focus remove kar rahe hain taake
-      onFocus ki wajah se dropdown dobara
-      automatically open na ho.
-    */
 
     if (inputRef.current) {
       inputRef.current.blur()
@@ -2804,12 +3056,12 @@ export default function Inventory() {
     setForm({
       ...form,
       productName: 'Custom',
-      customProductName: customName
+      customProductName:
+        customName
     })
 
     setProductSearch(customName)
     setIsCustomSelected(true)
-
     setShowDropdown(false)
 
     if (inputRef.current) {
@@ -2846,11 +3098,6 @@ export default function Inventory() {
 
     setProductSearch(value)
 
-    /*
-      Agar selected product ko edit kar rahe hain
-      to selection clear kar do.
-    */
-
     if (isCustomSelected) {
       setIsCustomSelected(false)
 
@@ -2871,10 +3118,6 @@ export default function Inventory() {
         customProductName: ''
       })
     }
-
-    /*
-      User typing kare to dropdown open.
-    */
 
     setShowDropdown(true)
   }
@@ -2920,9 +3163,18 @@ export default function Inventory() {
           {/* ADD STOCK */}
 
           <button
-            onClick={() =>
+            onClick={() => {
+              setForm({
+                ...emptyForm,
+                addedDate: getTodayDate()
+              })
+
+              setProductSearch('')
+              setShowDropdown(false)
+              setIsCustomSelected(false)
+              setMacError('')
               setShowForm(true)
-            }
+            }}
             className="flex items-center gap-2 rounded-lg bg-ink text-white text-sm font-medium px-4 py-2.5 hover:bg-inkSoft transition-colors self-start"
           >
             <Plus size={16} />
@@ -2934,7 +3186,7 @@ export default function Inventory() {
       </div>
 
       {/* ======================================================
-          STATUS FILTER BUTTONS
+          STATUS FILTERS
           ====================================================== */}
 
       <div className="flex flex-wrap gap-2 mb-4">
@@ -3017,6 +3269,33 @@ export default function Inventory() {
             }`}
           >
             ({stats.sold})
+          </span>
+        </button>
+
+        {/* DEMO */}
+
+        <button
+          onClick={() =>
+            setStatusFilter('Demo')
+          }
+          className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium border transition-colors ${
+            statusFilter === 'Demo'
+              ? 'bg-amber text-white border-amber'
+              : 'bg-surface text-slateink border-line hover:border-amber/30'
+          }`}
+        >
+          <RotateCcw size={15} />
+
+          Demo
+
+          <span
+            className={`text-xs ${
+              statusFilter === 'Demo'
+                ? 'text-white/70'
+                : 'text-slateink/70'
+            }`}
+          >
+            ({stats.demo})
           </span>
         </button>
 
@@ -3105,6 +3384,7 @@ export default function Inventory() {
             <table className="w-full text-sm">
 
               <thead>
+
                 <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-slateink">
 
                   <th className="px-4 py-3 font-medium">
@@ -3139,13 +3419,12 @@ export default function Inventory() {
                     Added
                   </th>
 
-                  {isOwner && (
-                    <th className="px-4 py-3 font-medium">
-                      Action
-                    </th>
-                  )}
+                  <th className="px-4 py-3 font-medium">
+                    Action
+                  </th>
 
                 </tr>
+
               </thead>
 
               <tbody>
@@ -3156,6 +3435,9 @@ export default function Inventory() {
                     getProductImage(
                       s.name
                     )
+
+                  const isDemo =
+                    s.status === 'demo'
 
                   return (
                     <tr
@@ -3246,11 +3528,15 @@ export default function Inventory() {
                           className={`rounded-full text-xs font-medium px-2.5 py-1 ${
                             s.status === 'sold'
                               ? 'bg-coral-light text-coral'
+                              : s.status === 'demo'
+                              ? 'bg-amber-light text-amber'
                               : 'bg-teal-light text-teal-dark'
                           }`}
                         >
                           {s.status === 'sold'
                             ? 'Sold'
+                            : s.status === 'demo'
+                            ? 'Demo'
                             : 'In Stock'}
                         </span>
 
@@ -3266,25 +3552,82 @@ export default function Inventory() {
 
                       {/* ACTION */}
 
-                      {isOwner && (
-                        <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-3">
 
-                          <button
-                            onClick={() =>
-                              handleDelete(
-                                s.id
-                              )
-                            }
-                            className="text-slateink hover:text-coral"
-                            aria-label="Delete stock"
-                          >
-                            <Trash2
-                              size={15}
-                            />
-                          </button>
+                        <div className="flex items-center gap-2 justify-center">
 
-                        </td>
-                      )}
+                          {/* DELETE */}
+
+                          {isOwner &&
+                            s.status !== 'demo' && (
+                              <button
+                                onClick={() =>
+                                  handleDelete(
+                                    s.id
+                                  )
+                                }
+                                className="text-slateink hover:text-coral"
+                                aria-label="Delete stock"
+                              >
+                                <Trash2
+                                  size={15}
+                                />
+                              </button>
+                            )}
+
+                          {/* VIEW DEMO DETAILS */}
+
+                          {isDemo && (
+                            <button
+                              onClick={() => {
+                                const details =
+                                  getDemoDetails(
+                                    s
+                                  )
+
+                                setShowDemoDetails({
+                                  ...s,
+                                  demoTo:
+                                    details.customerName,
+                                  demoCompany:
+                                    details.customerCompany,
+                                  demoPhone:
+                                    details.customerPhone
+                                })
+                              }}
+                              className="text-teal-dark hover:text-teal flex items-center gap-1 text-xs font-medium"
+                              title="View demo details"
+                            >
+                              <Eye size={14} />
+
+                              Details
+                            </button>
+                          )}
+
+                          {/* RETURN */}
+
+                          {isDemo && (
+                            <button
+                              onClick={() =>
+                                handleReturnDemo(
+                                  s.id
+                                )
+                              }
+                              className="text-teal-dark hover:text-teal flex items-center gap-1 text-xs font-medium"
+                              disabled={returning}
+                              title="Return to stock"
+                            >
+                              <RotateCcw
+                                size={14}
+                              />
+
+                              Return
+                            </button>
+                          )}
+
+                        </div>
+
+                      </td>
 
                     </tr>
                   )
@@ -3297,6 +3640,150 @@ export default function Inventory() {
           </div>
 
         </div>
+
+      )}
+
+      {/* ============================================================
+          DEMO DETAILS MODAL
+          ============================================================ */}
+
+      {showDemoDetails && (
+
+        <Modal
+          title="Demo Details"
+          onClose={() =>
+            setShowDemoDetails(null)
+          }
+        >
+
+          <div className="space-y-4">
+
+            <div className="grid grid-cols-2 gap-3 text-sm">
+
+              <div>
+                <p className="text-xs text-slateink">
+                  Product
+                </p>
+
+                <p className="font-medium text-ink">
+                  {showDemoDetails.name}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs text-slateink">
+                  Category
+                </p>
+
+                <p className="font-medium text-ink">
+                  {showDemoDetails.category}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs text-slateink">
+                  MAC Address
+                </p>
+
+                <p className="font-medium text-ink font-mono">
+                  {showDemoDetails.mac || '—'}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs text-slateink">
+                  Serial Number
+                </p>
+
+                <p className="font-medium text-ink font-mono">
+                  {showDemoDetails.serial || '—'}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs text-slateink">
+                  Quantity
+                </p>
+
+                <p className="font-medium text-ink">
+                  {showDemoDetails.quantity}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs text-slateink">
+                  Demo Date
+                </p>
+
+                <p className="font-medium text-ink">
+                  {formatDate(
+                    showDemoDetails.demoDate
+                  )}
+                </p>
+              </div>
+
+              <div className="col-span-2">
+
+                <p className="text-xs text-slateink">
+                  Demo To (Person Name)
+                </p>
+
+                <p className="font-medium text-ink">
+                  {showDemoDetails.demoTo || '—'}
+                </p>
+
+              </div>
+
+              <div className="col-span-2">
+
+                <p className="text-xs text-slateink">
+                  Company Name
+                </p>
+
+                <p className="font-medium text-ink">
+                  {showDemoDetails.demoCompany || '—'}
+                </p>
+
+              </div>
+
+              <div className="col-span-2">
+
+                <p className="text-xs text-slateink">
+                  Contact Number
+                </p>
+
+                <p className="font-medium text-ink">
+                  {showDemoDetails.demoPhone || '—'}
+                </p>
+
+              </div>
+
+              <div className="col-span-2">
+
+                <p className="text-xs text-slateink">
+                  DDC Number
+                </p>
+
+                <p className="font-medium text-ink font-mono">
+                  {showDemoDetails.ddcNumber || '—'}
+                </p>
+
+              </div>
+
+            </div>
+
+            <button
+              onClick={() =>
+                setShowDemoDetails(null)
+              }
+              className="w-full rounded-lg bg-ink text-white text-sm font-medium py-2.5 hover:bg-inkSoft transition-colors"
+            >
+              Close
+            </button>
+
+          </div>
+
+        </Modal>
 
       )}
 
@@ -3346,6 +3833,10 @@ export default function Inventory() {
                     Sold
                   </th>
 
+                  <th className="px-4 py-3 font-medium text-center text-amber">
+                    Demo
+                  </th>
+
                   <th className="px-4 py-3 font-medium">
                     Categories
                   </th>
@@ -3365,7 +3856,7 @@ export default function Inventory() {
                   <tr>
 
                     <td
-                      colSpan={8}
+                      colSpan={9}
                       className="text-center py-8 text-slateink"
                     >
                       No products found
@@ -3389,13 +3880,9 @@ export default function Inventory() {
                           className="border-b border-line last:border-0 hover:bg-paper/60"
                         >
 
-                          {/* NUMBER */}
-
                           <td className="px-4 py-3 text-center">
                             {index + 1}
                           </td>
-
-                          {/* IMAGE */}
 
                           <td className="px-4 py-3">
 
@@ -3426,8 +3913,6 @@ export default function Inventory() {
 
                           </td>
 
-                          {/* NAME */}
-
                           <td className="px-4 py-3">
 
                             <p className="font-medium text-ink">
@@ -3435,8 +3920,6 @@ export default function Inventory() {
                             </p>
 
                           </td>
-
-                          {/* TOTAL */}
 
                           <td className="px-4 py-3 text-center">
 
@@ -3446,8 +3929,6 @@ export default function Inventory() {
 
                           </td>
 
-                          {/* IN STOCK */}
-
                           <td className="px-4 py-3 text-center">
 
                             <span className="font-medium text-teal-dark">
@@ -3455,8 +3936,6 @@ export default function Inventory() {
                             </span>
 
                           </td>
-
-                          {/* SOLD */}
 
                           <td className="px-4 py-3 text-center">
 
@@ -3466,7 +3945,13 @@ export default function Inventory() {
 
                           </td>
 
-                          {/* CATEGORIES */}
+                          <td className="px-4 py-3 text-center">
+
+                            <span className="font-medium text-amber">
+                              {group.demoQty}
+                            </span>
+
+                          </td>
 
                           <td className="px-4 py-3">
 
@@ -3476,20 +3961,20 @@ export default function Inventory() {
                                 group.categories
                               ).map(
                                 (cat) => (
+
                                   <span
                                     key={cat}
                                     className="rounded-full bg-teal-light text-teal-dark text-xs font-medium px-2.5 py-1"
                                   >
                                     {cat}
                                   </span>
+
                                 )
                               )}
 
                             </div>
 
                           </td>
-
-                          {/* ACTION */}
 
                           <td className="px-4 py-3">
 
@@ -3518,8 +4003,6 @@ export default function Inventory() {
                 )}
 
               </tbody>
-
-              {/* FOOTER */}
 
               {groupedData.length > 0 && (
 
@@ -3565,6 +4048,16 @@ export default function Inventory() {
 
                     </td>
 
+                    <td className="px-4 py-3 text-center font-bold text-amber">
+
+                      {groupedData.reduce(
+                        (sum, g) =>
+                          sum + g.demoQty,
+                        0
+                      )}
+
+                    </td>
+
                     <td colSpan={2}></td>
 
                   </tr>
@@ -3589,9 +4082,17 @@ export default function Inventory() {
 
         <Modal
           title="Add Stock"
-          onClose={() =>
+          onClose={() => {
             setShowForm(false)
-          }
+            setForm({
+              ...emptyForm,
+              addedDate: getTodayDate()
+            })
+            setProductSearch('')
+            setShowDropdown(false)
+            setIsCustomSelected(false)
+            setMacError('')
+          }}
         >
 
           <form
@@ -3623,12 +4124,14 @@ export default function Inventory() {
 
                 {CATEGORIES.map(
                   (c) => (
+
                     <option
                       key={c}
                       value={c}
                     >
                       {c}
                     </option>
+
                   )
                 )}
 
@@ -3675,7 +4178,6 @@ export default function Inventory() {
 
             {/* ==================================================
                 PRODUCT NAME
-                SEARCHABLE DROPDOWN
                 ================================================== */}
 
             <label className="block">
@@ -3689,8 +4191,6 @@ export default function Inventory() {
                 ref={dropdownRef}
               >
 
-                {/* INPUT */}
-
                 <div className="relative">
 
                   <input
@@ -3700,15 +4200,6 @@ export default function Inventory() {
                     onChange={
                       handleInputChange
                     }
-
-                    /*
-                      IMPORTANT FIX:
-
-                      Selected product ke baad
-                      automatically dropdown
-                      open nahi hoga.
-                    */
-
                     onFocus={() => {
                       if (
                         !form.productName &&
@@ -3719,12 +4210,9 @@ export default function Inventory() {
                         )
                       }
                     }}
-
                     placeholder="Search or type product name…"
                     className="input w-full pr-10"
                   />
-
-                  {/* CLEAR BUTTON */}
 
                   {productSearch && (
 
@@ -3740,25 +4228,15 @@ export default function Inventory() {
 
                   )}
 
-                  {/* DROPDOWN ARROW */}
-
                   <button
                     type="button"
                     onClick={() => {
-
-                      /*
-                        Agar product selected hai
-                        to arrow se dropdown
-                        automatically open nahi hoga.
-
-                        Clear karne ke baad
-                        normally open hoga.
-                      */
 
                       if (
                         form.productName ||
                         isCustomSelected
                       ) {
+
                         setForm({
                           ...form,
                           productName: '',
@@ -3799,10 +4277,6 @@ export default function Inventory() {
 
                 </div>
 
-                {/* ==================================================
-                    SELECTED PRODUCT DISPLAY
-                    ================================================== */}
-
                 {form.productName &&
                   form.productName !==
                     'Custom' && (
@@ -3839,10 +4313,6 @@ export default function Inventory() {
 
                 )}
 
-                {/* ==================================================
-                    DROPDOWN
-                    ================================================== */}
-
                 {showDropdown &&
                   !isCustomSelected && (
 
@@ -3858,25 +4328,14 @@ export default function Inventory() {
 
                             <div
                               key={p}
-
-                              /*
-                                IMPORTANT:
-
-                                Product select karte hi
-                                selectProduct()
-                                dropdown close karega.
-                              */
-
                               onMouseDown={(e) => {
                                 e.preventDefault()
                               }}
-
                               onClick={() =>
                                 selectProduct(
                                   p
                                 )
                               }
-
                               className="px-4 py-2.5 hover:bg-teal-light cursor-pointer text-sm text-ink transition-colors"
                             >
                               {p}
@@ -3884,8 +4343,6 @@ export default function Inventory() {
 
                           )
                         )}
-
-                        {/* CUSTOM PRODUCT OPTION */}
 
                         {!PRODUCT_NAMES.includes(
                           productSearch.trim()
@@ -3899,13 +4356,11 @@ export default function Inventory() {
                               ) => {
                                 e.preventDefault()
                               }}
-
                               onClick={() =>
                                 selectCustomProduct(
                                   productSearch
                                 )
                               }
-
                               className="px-4 py-2.5 hover:bg-teal-light cursor-pointer text-sm text-teal-dark border-t border-line font-medium"
                             >
                               + Add "
@@ -3929,13 +4384,11 @@ export default function Inventory() {
                           ) => {
                             e.preventDefault()
                           }}
-
                           onClick={() =>
                             selectCustomProduct(
                               productSearch
                             )
                           }
-
                           className="px-4 py-3 hover:bg-teal-light cursor-pointer text-sm text-teal-dark"
                         >
                           + Add "
@@ -3955,6 +4408,32 @@ export default function Inventory() {
                 )}
 
               </div>
+
+            </label>
+
+            {/* ==================================================
+                DATE OF ENTRY
+                ================================================== */}
+
+            <label className="block">
+
+              <span className="text-xs font-medium text-slateink">
+                Date of Entry *
+              </span>
+
+              <input
+                type="date"
+                required
+                value={form.addedDate}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    addedDate:
+                      e.target.value
+                  })
+                }
+                className="input mt-1"
+              />
 
             </label>
 

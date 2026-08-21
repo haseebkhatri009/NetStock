@@ -12,6 +12,7 @@ import Invoice from './pages/Invoice'
 import WarrantyValidator from './pages/WarrantyValidator'
 import CreateUser from './pages/CreateUser'
 import Quotation from './pages/Quotation'
+import DemoDeliveryChallan from './pages/DemoDeliveryChallan'
 
 
 function Shell({ title, children }) {
@@ -75,6 +76,21 @@ export default function App() {
           <ProtectedRoute>
             <Shell title="Delivery Challan">
               <DeliveryChallan />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* =========================
+          DEMO DELIVERY CHALLAN
+      ========================= */}
+
+      <Route
+        path="/demo-challan"
+        element={
+          <ProtectedRoute>
+            <Shell title="Demo Delivery Challan">
+              <DemoDeliveryChallan />
             </Shell>
           </ProtectedRoute>
         }

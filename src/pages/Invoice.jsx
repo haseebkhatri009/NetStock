@@ -3118,8 +3118,7 @@
 // }
 
 
-
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ref, push, onValue, update, get, set, remove } from 'firebase/database'
 import {
   Plus,
@@ -3137,7 +3136,6 @@ import { useAuth } from '../context/AuthContext'
 import {
   formatDate,
   todayISO,
-  docNumber,
   currency
 } from '../utils/helpers'
 
@@ -3153,7 +3151,6 @@ const COMPANY_NAME = ''
 
 const COMPANY_LOGO = '/PN.png'
 
-
 const COMPANY_ADDRESS = `
 KCHS, Gohar Chamber, Office # 304,
 Shahra-e-Faisal, near Duty Free Shop,
@@ -3168,88 +3165,144 @@ const COMPANY_STRN = '-'
 
 
 /* ============================================================
-   INVOICE NUMBER GENERATOR - DATE BASED WITH COUNTER
+   INVOICE NUMBER GENERATOR
    ============================================================ */
 
-// Get today's date in YYYYMMDD format
 function getTodayDateString() {
   const today = new Date()
   const year = today.getFullYear()
   const month = String(today.getMonth() + 1).padStart(2, '0')
   const day = String(today.getDate()).padStart(2, '0')
+
   return `${year}${month}${day}`
 }
 
-// Yeh function SIRF next number READ karega, INCREMENT nahi karega
+
 async function getNextInvoiceNumber(companyId) {
+
   try {
+
     const dateStr = getTodayDateString()
-    const counterRef = ref(db, `companies/${companyId}/counters/invoice`)
-    const snapshot = await get(counterRef)
-    
+
+    const counterRef =
+      ref(
+        db,
+        `companies/${companyId}/counters/invoice`
+      )
+
+    const snapshot =
+      await get(counterRef)
+
     let lastNumber = 0
     let lastDate = ''
-    
+
     if (snapshot.exists()) {
+
       const data = snapshot.val()
-      lastNumber = data.number || 0
-      lastDate = data.date || ''
+
+      lastNumber =
+        data.number || 0
+
+      lastDate =
+        data.date || ''
+
     }
-    
-    // Agar date change ho gayi hai toh counter reset karo
-    let nextNumber = lastNumber + 1
+
+    let nextNumber =
+      lastNumber + 1
+
     if (lastDate !== dateStr) {
       nextNumber = 1
     }
-    
-    const padded = String(nextNumber).padStart(4, '0')
+
+    const padded =
+      String(nextNumber).padStart(4, '0')
+
     return `INV-${dateStr}-${padded}`
-    
+
   } catch (error) {
-    console.error('Error getting invoice number:', error)
-    const dateStr = getTodayDateString()
-    const timestamp = Date.now().toString().slice(-6)
+
+    console.error(
+      'Error getting invoice number:',
+      error
+    )
+
+    const dateStr =
+      getTodayDateString()
+
+    const timestamp =
+      Date.now().toString().slice(-6)
+
     return `INV-${dateStr}-${timestamp}`
+
   }
+
 }
 
-// Yeh function SIRF increment karega (save ke waqt)
+
 async function incrementInvoiceCounter(companyId) {
+
   try {
-    const dateStr = getTodayDateString()
-    const counterRef = ref(db, `companies/${companyId}/counters/invoice`)
-    const snapshot = await get(counterRef)
-    
+
+    const dateStr =
+      getTodayDateString()
+
+    const counterRef =
+      ref(
+        db,
+        `companies/${companyId}/counters/invoice`
+      )
+
+    const snapshot =
+      await get(counterRef)
+
     let lastNumber = 0
     let lastDate = ''
-    
+
     if (snapshot.exists()) {
-      const data = snapshot.val()
-      lastNumber = data.number || 0
-      lastDate = data.date || ''
+
+      const data =
+        snapshot.val()
+
+      lastNumber =
+        data.number || 0
+
+      lastDate =
+        data.date || ''
+
     }
-    
-    // Agar date change ho gayi hai toh counter reset karo
-    let newNumber = lastNumber + 1
+
+    let newNumber =
+      lastNumber + 1
+
     if (lastDate !== dateStr) {
       newNumber = 1
     }
-    
-    // Counter update karo with date and number
-    await set(counterRef, {
-      date: dateStr,
-      number: newNumber
-    })
-    
+
+    await set(
+      counterRef,
+      {
+        date: dateStr,
+        number: newNumber
+      }
+    )
+
     return {
       number: newNumber,
       date: dateStr
     }
-    
+
   } catch (error) {
-    console.error('Error incrementing counter:', error)
+
+    console.error(
+      'Error incrementing counter:',
+      error
+    )
+
     return null
+
   }
+
 }
 
 
@@ -3272,53 +3325,79 @@ export default function Invoice() {
 
   const { companyId } = useAuth()
 
-  const [customers, setCustomers] = useState(null)
+  const [customers, setCustomers] =
+    useState(null)
 
-  const [invoices, setInvoices] = useState(null)
+  const [invoices, setInvoices] =
+    useState(null)
 
-  const [showForm, setShowForm] = useState(false)
+  const [showForm, setShowForm] =
+    useState(false)
 
-  const [preview, setPreview] = useState(null)
+  const [preview, setPreview] =
+    useState(null)
 
-  const [editingInvoice, setEditingInvoice] = useState(null)
+  const [editingInvoice, setEditingInvoice] =
+    useState(null)
 
-  const [customerId, setCustomerId] = useState('')
+  const [customerId, setCustomerId] =
+    useState('')
 
-  const [invoiceNumber, setInvoiceNumber] = useState('')  // NEW: Invoice Number state
-
-  const [poNumber, setPoNumber] = useState('')
-
-  const [poDate, setPoDate] = useState('')
-
-  const [items, setItems] = useState([])
-
-  const [pick, setPick] = useState({
-    ...emptyItem
-  })
-
-  const [saving, setSaving] = useState(false)
-
-  const [error, setError] = useState('')
+  const [invoiceNumber, setInvoiceNumber] =
+    useState('')
 
   /* ============================================================
-     DELETE CONFIRMATION STATE
+     NEW: INVOICE DATE
      ============================================================ */
 
-  const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [invoiceDate, setInvoiceDate] =
+    useState(todayISO())
 
-  const [deleting, setDeleting] = useState(false)
+  const [poNumber, setPoNumber] =
+    useState('')
+
+  const [poDate, setPoDate] =
+    useState('')
+
+  const [items, setItems] =
+    useState([])
+
+  const [pick, setPick] =
+    useState({
+      ...emptyItem
+    })
+
+  const [saving, setSaving] =
+    useState(false)
+
+  const [error, setError] =
+    useState('')
+
+
+  /* ============================================================
+     DELETE CONFIRMATION
+     ============================================================ */
+
+  const [deleteConfirm, setDeleteConfirm] =
+    useState(null)
+
+  const [deleting, setDeleting] =
+    useState(false)
+
 
   /* ============================================================
      EDIT PRODUCT STATE
      ============================================================ */
 
-  const [editingProductIndex, setEditingProductIndex] = useState(null)
+  const [editingProductIndex, setEditingProductIndex] =
+    useState(null)
 
-  const [editProduct, setEditProduct] = useState({
-    name: '',
-    qty: 1,
-    price: 0
-  })
+  const [editProduct, setEditProduct] =
+    useState({
+      name: '',
+      qty: 1,
+      price: 0
+    })
 
 
   /* ============================================================
@@ -3332,110 +3411,105 @@ export default function Invoice() {
     }
 
 
-    /* ==========================================================
-       CUSTOMERS
-       ========================================================== */
-
-    const customersRef = ref(
-      db,
-      `companies/${companyId}/customers`
-    )
+    const customersRef =
+      ref(
+        db,
+        `companies/${companyId}/customers`
+      )
 
 
-    const unsubscribeCustomers = onValue(
-      customersRef,
+    const unsubscribeCustomers =
+      onValue(
+        customersRef,
 
-      (snapshot) => {
+        (snapshot) => {
 
-        const value =
-          snapshot.val() || {}
+          const value =
+            snapshot.val() || {}
 
-        const list =
-          Object.entries(value).map(
-            ([id, customer]) => ({
-              id,
-              ...customer
-            })
-          )
-
-        setCustomers(list)
-
-      },
-
-      (err) => {
-
-        console.error(
-          'Customers read failed:',
-          err
-        )
-
-        setCustomers([])
-
-      }
-    )
-
-
-    /* ==========================================================
-       INVOICES
-       ========================================================== */
-
-    const invoicesRef = ref(
-      db,
-      `companies/${companyId}/invoices`
-    )
-
-
-    const unsubscribeInvoices = onValue(
-      invoicesRef,
-
-      (snapshot) => {
-
-        const value =
-          snapshot.val() || {}
-
-        const list =
-          Object.entries(value)
-            .map(
-              ([id, invoice]) => ({
+          const list =
+            Object.entries(value).map(
+              ([id, customer]) => ({
                 id,
-                ...invoice
+                ...customer
               })
             )
-            .sort(
-              (a, b) =>
-                (
-                  b.updatedAt ||
-                  b.createdAt ||
-                  0
-                ) -
-                (
-                  a.updatedAt ||
-                  a.createdAt ||
-                  0
-                )
-            )
 
-        setInvoices(list)
+          setCustomers(list)
 
-      },
+        },
 
-      (err) => {
+        (err) => {
 
-        console.error(
-          'Invoices read failed:',
-          err
-        )
+          console.error(
+            'Customers read failed:',
+            err
+          )
 
-        setInvoices([])
+          setCustomers([])
 
-      }
-    )
+        }
+      )
+
+
+    const invoicesRef =
+      ref(
+        db,
+        `companies/${companyId}/invoices`
+      )
+
+
+    const unsubscribeInvoices =
+      onValue(
+        invoicesRef,
+
+        (snapshot) => {
+
+          const value =
+            snapshot.val() || {}
+
+          const list =
+            Object.entries(value)
+              .map(
+                ([id, invoice]) => ({
+                  id,
+                  ...invoice
+                })
+              )
+              .sort(
+                (a, b) =>
+                  (
+                    b.updatedAt ||
+                    b.createdAt ||
+                    0
+                  ) -
+                  (
+                    a.updatedAt ||
+                    a.createdAt ||
+                    0
+                  )
+              )
+
+          setInvoices(list)
+
+        },
+
+        (err) => {
+
+          console.error(
+            'Invoices read failed:',
+            err
+          )
+
+          setInvoices([])
+
+        }
+      )
 
 
     return () => {
 
       unsubscribeCustomers()
-
       unsubscribeInvoices()
 
     }
@@ -3447,27 +3521,28 @@ export default function Invoice() {
      TOTAL
      ============================================================ */
 
-  const total = useMemo(() => {
+  const total =
+    useMemo(() => {
 
-    return items.reduce(
-      (sum, item) => {
+      return items.reduce(
+        (sum, item) => {
 
-        const qty =
-          Number(item.qty) || 0
+          const qty =
+            Number(item.qty) || 0
 
-        const price =
-          Number(item.price) || 0
+          const price =
+            Number(item.price) || 0
 
-        return (
-          sum +
-          qty * price
-        )
+          return (
+            sum +
+            qty * price
+          )
 
-      },
-      0
-    )
+        },
+        0
+      )
 
-  }, [items])
+    }, [items])
 
 
   /* ============================================================
@@ -3479,7 +3554,6 @@ export default function Invoice() {
     if (!pick.name.trim()) {
       return
     }
-
 
     const newItem = {
 
@@ -3500,14 +3574,12 @@ export default function Invoice() {
 
     }
 
-
     setItems(
       previous => [
         ...previous,
         newItem
       ]
     )
-
 
     setPick({
       ...emptyItem
@@ -3539,7 +3611,8 @@ export default function Invoice() {
 
   function openEditProduct(index) {
 
-    const item = items[index]
+    const item =
+      items[index]
 
     setEditingProductIndex(index)
 
@@ -3562,12 +3635,26 @@ export default function Invoice() {
       return
     }
 
-    const updatedItems = [...items]
+    const updatedItems =
+      [...items]
 
-    updatedItems[editingProductIndex] = {
-      name: editProduct.name.trim(),
-      qty: Math.max(1, Number(editProduct.qty) || 1),
-      price: Math.max(0, Number(editProduct.price) || 0)
+    updatedItems[
+      editingProductIndex
+    ] = {
+      name:
+        editProduct.name.trim(),
+
+      qty:
+        Math.max(
+          1,
+          Number(editProduct.qty) || 1
+        ),
+
+      price:
+        Math.max(
+          0,
+          Number(editProduct.price) || 0
+        )
     }
 
     setItems(updatedItems)
@@ -3608,7 +3695,13 @@ export default function Invoice() {
 
     setCustomerId('')
 
-    setInvoiceNumber('')  // Reset invoice number
+    setInvoiceNumber('')
+
+    /* NEW: RESET DATE TO TODAY */
+
+    setInvoiceDate(
+      todayISO()
+    )
 
     setPoNumber('')
 
@@ -3641,7 +3734,10 @@ export default function Invoice() {
 
   async function handleDeleteInvoice() {
 
-    if (!companyId || !deleteConfirm) {
+    if (
+      !companyId ||
+      !deleteConfirm
+    ) {
       return
     }
 
@@ -3649,10 +3745,11 @@ export default function Invoice() {
 
     try {
 
-      const invoiceRef = ref(
-        db,
-        `companies/${companyId}/invoices/${deleteConfirm.id}`
-      )
+      const invoiceRef =
+        ref(
+          db,
+          `companies/${companyId}/invoices/${deleteConfirm.id}`
+        )
 
       await remove(invoiceRef)
 
@@ -3682,18 +3779,31 @@ export default function Invoice() {
      OPEN NEW INVOICE
      ============================================================ */
 
-  const openNewInvoice = async () => {
+  const openNewInvoice =
+    async () => {
 
-    resetForm()
+      resetForm()
 
-    if (companyId) {
-      const number = await getNextInvoiceNumber(companyId)
-      setInvoiceNumber(number)
+      /* NEW: DATE WILL BE ASKED, DEFAULT TODAY */
+
+      setInvoiceDate(
+        todayISO()
+      )
+
+      if (companyId) {
+
+        const number =
+          await getNextInvoiceNumber(
+            companyId
+          )
+
+        setInvoiceNumber(number)
+
+      }
+
+      setShowForm(true)
+
     }
-
-    setShowForm(true)
-
-  }
 
 
   /* ============================================================
@@ -3709,7 +3819,14 @@ export default function Invoice() {
     )
 
     setInvoiceNumber(
-      invoice.invoiceNumber || ''  // Set invoice number
+      invoice.invoiceNumber || ''
+    )
+
+    /* NEW: LOAD EXISTING INVOICE DATE */
+
+    setInvoiceDate(
+      invoice.date ||
+      todayISO()
     )
 
     setPoNumber(
@@ -3800,6 +3917,19 @@ export default function Invoice() {
     }
 
 
+    /* NEW: DATE VALIDATION */
+
+    if (!invoiceDate) {
+
+      setError(
+        'Invoice date select karein.'
+      )
+
+      return
+
+    }
+
+
     if (items.length === 0) {
 
       setError(
@@ -3834,21 +3964,41 @@ export default function Invoice() {
 
     try {
 
-      let finalInvoiceNumber = invoiceNumber
+      let finalInvoiceNumber =
+        invoiceNumber
 
-      // Agar editing nahi hai (new invoice) toh counter increment karo
+
       if (!editingInvoice) {
-        // Counter increment karo (tracking ke liye)
-        await incrementInvoiceCounter(companyId)
-        
-        // Agar user ne number empty chhoda hai toh fallback generate karo
-        if (!finalInvoiceNumber || finalInvoiceNumber.trim() === '') {
-          const dateStr = getTodayDateString()
-          const timestamp = Date.now().toString().slice(-6)
-          finalInvoiceNumber = `INV-${dateStr}-${timestamp}`
-          setInvoiceNumber(finalInvoiceNumber)
+
+        await incrementInvoiceCounter(
+          companyId
+        )
+
+
+        if (
+          !finalInvoiceNumber ||
+          finalInvoiceNumber.trim() === ''
+        ) {
+
+          const dateStr =
+            getTodayDateString()
+
+          const timestamp =
+            Date.now()
+              .toString()
+              .slice(-6)
+
+          finalInvoiceNumber =
+            `INV-${dateStr}-${timestamp}`
+
+          setInvoiceNumber(
+            finalInvoiceNumber
+          )
+
         }
+
       }
+
 
       /* ========================================================
          UPDATE EXISTING INVOICE
@@ -3866,11 +4016,12 @@ export default function Invoice() {
         const updatedInvoice = {
 
           invoiceNumber:
-            finalInvoiceNumber,  // Use editable invoice number
+            finalInvoiceNumber,
+
+          /* NEW: USE SELECTED DATE */
 
           date:
-            editingInvoice.date ||
-            todayISO(),
+            invoiceDate,
 
           poNumber:
             poNumber || '',
@@ -3879,7 +4030,6 @@ export default function Invoice() {
             poDate || '',
 
           customerId:
-
             customerId,
 
           customerName:
@@ -3913,11 +4063,9 @@ export default function Invoice() {
             COMPANY_STRN,
 
           items:
-
             items,
 
           total:
-
             total,
 
           updatedAt:
@@ -4006,81 +4154,65 @@ export default function Invoice() {
          ======================================================== */
 
       const date =
-        todayISO()
+        invoiceDate
 
 
       const invoiceData = {
 
         invoiceNumber:
-
           finalInvoiceNumber,
 
-        date:
+        /* NEW: SELECTED DATE */
 
+        date:
           date,
 
         poNumber:
-
           poNumber || '',
 
         poDate:
-
           poDate || '',
 
         customerId:
-
           customerId,
 
         customerName:
-
           customer.name || '',
 
         customerCompany:
-
           customer.company || '',
 
         customerPhone:
-
           customer.phone || '',
 
         customerAddress:
-
           customer.address || '',
 
         companyName:
-
           COMPANY_NAME,
 
         companyLogo:
-
           COMPANY_LOGO,
 
         companyAddress:
-
           COMPANY_ADDRESS,
 
         companyPhone:
-
           COMPANY_PHONE,
 
         companyNTN:
-
           COMPANY_NTN,
 
         companySTRN:
-
           COMPANY_STRN,
 
         items:
-
           items,
 
         total:
-
           total,
 
         createdAt:
-
           Date.now()
 
       }
@@ -4106,69 +4238,53 @@ export default function Invoice() {
           newInvoice.key,
 
         invoiceNumber:
-
           finalInvoiceNumber,
 
         date:
-
           date,
 
         poNumber:
-
           invoiceData.poNumber,
 
         poDate:
-
           invoiceData.poDate,
 
         items:
-
           invoiceData.items,
 
         total:
-
           invoiceData.total,
 
         companyName:
-
           COMPANY_NAME,
 
         companyLogo:
-
           COMPANY_LOGO,
 
         companyAddress:
-
           COMPANY_ADDRESS,
 
         companyPhone:
-
           COMPANY_PHONE,
 
         companyNTN:
-
           COMPANY_NTN,
 
         companySTRN:
-
           COMPANY_STRN,
 
         customer: {
 
           name:
-
             invoiceData.customerName,
 
           company:
-
             invoiceData.customerCompany,
 
           phone:
-
             invoiceData.customerPhone,
 
           address:
-
             invoiceData.customerAddress
 
         }
@@ -4203,12 +4319,20 @@ export default function Invoice() {
 
 
   /* ============================================================
-     DOWNLOAD PDF - SHOW PREVIEW FIRST
+     DOWNLOAD PDF
      ============================================================ */
 
   function handleDownloadPdf(invoice) {
-    const previewInvoice = convertInvoiceToPreview(invoice)
-    setPreview(previewInvoice)
+
+    const previewInvoice =
+      convertInvoiceToPreview(
+        invoice
+      )
+
+    setPreview(
+      previewInvoice
+    )
+
   }
 
 
@@ -4222,9 +4346,7 @@ export default function Invoice() {
 
       <div>
 
-        {/* ======================================================
-            HEADER
-            ====================================================== */}
+        {/* HEADER */}
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
 
@@ -4242,9 +4364,7 @@ export default function Invoice() {
 
 
           <button
-            onClick={
-              openNewInvoice
-            }
+            onClick={openNewInvoice}
             className="flex items-center gap-2 rounded-lg bg-ink text-white text-sm font-medium px-4 py-2.5 hover:bg-inkSoft transition-colors self-start"
           >
 
@@ -4257,9 +4377,7 @@ export default function Invoice() {
         </div>
 
 
-        {/* ======================================================
-            INVOICE LIST
-            ====================================================== */}
+        {/* INVOICE LIST */}
 
         {invoices === null ? (
 
@@ -4323,52 +4441,45 @@ export default function Invoice() {
                     invoice => (
 
                       <tr
-                        key={
-                          invoice.id
-                        }
+                        key={invoice.id}
                         className="border-b border-line last:border-0 hover:bg-paper/60"
                       >
 
                         <td className="px-4 py-3 font-mono text-xs">
-                          {
-                            invoice.invoiceNumber
-                          }
+                          {invoice.invoiceNumber}
                         </td>
 
 
                         <td className="px-4 py-3">
 
                           <p className="font-medium text-ink">
-                            {
-                              invoice.customerName
-                            }
+                            {invoice.customerName}
                           </p>
 
                           <p className="text-xs text-slateink">
-                            {
-                              invoice.customerCompany
-                            }
+                            {invoice.customerCompany}
                           </p>
 
                         </td>
 
 
                         <td className="px-4 py-3 font-medium text-ink">
+
                           Rs{' '}
-                          {
-                            currency(
-                              invoice.total
-                            )
-                          }
+
+                          {currency(
+                            invoice.total
+                          )}
+
                         </td>
 
 
                         <td className="px-4 py-3 text-xs font-mono text-slateink">
-                          {
-                            formatDate(
-                              invoice.date
-                            )
-                          }
+
+                          {formatDate(
+                            invoice.date
+                          )}
+
                         </td>
 
 
@@ -4386,9 +4497,7 @@ export default function Invoice() {
                               }
                               className="text-teal-dark text-xs font-medium hover:underline"
                             >
-
                               View
-
                             </button>
 
 
@@ -4401,16 +4510,13 @@ export default function Invoice() {
                               className="inline-flex items-center gap-1.5 text-xs font-medium text-ink hover:text-teal-dark"
                             >
 
-                              <Pencil
-                                size={13}
-                              />
+                              <Pencil size={13} />
 
                               Edit
 
                             </button>
 
 
-                            {/* DOWNLOAD PDF */}
                             <button
                               onClick={() =>
                                 handleDownloadPdf(
@@ -4420,26 +4526,23 @@ export default function Invoice() {
                               className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600 hover:text-red-800"
                             >
 
-                              <Download
-                                size={13}
-                              />
+                              <Download size={13} />
 
                               PDF
 
                             </button>
 
 
-                            {/* DELETE BUTTON */}
                             <button
                               onClick={() =>
-                                setDeleteConfirm(invoice)
+                                setDeleteConfirm(
+                                  invoice
+                                )
                               }
                               className="inline-flex items-center gap-1.5 text-xs font-medium text-coral hover:text-red-700"
                             >
 
-                              <Trash2
-                                size={13}
-                              />
+                              <Trash2 size={13} />
 
                               Delete
 
@@ -4465,9 +4568,7 @@ export default function Invoice() {
         )}
 
 
-        {/* ======================================================
-            CREATE / EDIT MODAL
-            ====================================================== */}
+        {/* CREATE / EDIT MODAL */}
 
         {showForm && (
 
@@ -4477,22 +4578,18 @@ export default function Invoice() {
                 ? `Edit Invoice ${editingInvoice.invoiceNumber}`
                 : 'New Invoice'
             }
-            onClose={
-              closeForm
-            }
+            onClose={closeForm}
             wide
           >
 
             <form
-              onSubmit={
-                handleSubmit
-              }
+              onSubmit={handleSubmit}
               className="space-y-5"
             >
 
 
               {/* =================================================
-                  CUSTOMER + INVOICE NUMBER
+                  INVOICE NUMBER + DATE
                   ================================================= */}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -4505,9 +4602,7 @@ export default function Invoice() {
 
                   <input
                     type="text"
-                    value={
-                      invoiceNumber
-                    }
+                    value={invoiceNumber}
                     onChange={(e) =>
                       setInvoiceNumber(
                         e.target.value
@@ -4525,6 +4620,39 @@ export default function Invoice() {
                 </label>
 
 
+                {/* =================================================
+                    NEW: INVOICE DATE
+                    ================================================= */}
+
+                <label className="block">
+
+                  <span className="text-xs font-medium text-slateink">
+                    Invoice Date *
+                  </span>
+
+                  <input
+                    type="date"
+                    value={invoiceDate}
+                    onChange={(e) =>
+                      setInvoiceDate(
+                        e.target.value
+                      )
+                    }
+                    className="input mt-1"
+                    required
+                  />
+
+                </label>
+
+              </div>
+
+
+              {/* =================================================
+                  CUSTOMER
+                  ================================================= */}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
                 <label className="block">
 
                   <span className="text-xs font-medium text-slateink">
@@ -4532,9 +4660,7 @@ export default function Invoice() {
                   </span>
 
                   <select
-                    value={
-                      customerId
-                    }
+                    value={customerId}
                     onChange={(e) =>
                       setCustomerId(
                         e.target.value
@@ -4552,23 +4678,15 @@ export default function Invoice() {
                       customer => (
 
                         <option
-                          key={
-                            customer.id
-                          }
-                          value={
-                            customer.id
-                          }
+                          key={customer.id}
+                          value={customer.id}
                         >
 
-                          {
-                            customer.name
-                          }
+                          {customer.name}
 
-                          {
-                            customer.company
-                              ? ` — ${customer.company}`
-                              : ''
-                          }
+                          {customer.company
+                            ? ` — ${customer.company}`
+                            : ''}
 
                         </option>
 
@@ -4596,9 +4714,7 @@ export default function Invoice() {
 
                   <input
                     type="text"
-                    value={
-                      poNumber
-                    }
+                    value={poNumber}
                     onChange={(e) =>
                       setPoNumber(
                         e.target.value
@@ -4619,9 +4735,7 @@ export default function Invoice() {
 
                   <input
                     type="date"
-                    value={
-                      poDate
-                    }
+                    value={poDate}
                     onChange={(e) =>
                       setPoDate(
                         e.target.value
@@ -4649,9 +4763,7 @@ export default function Invoice() {
                 <div className="flex flex-col sm:flex-row gap-2">
 
                   <input
-                    value={
-                      pick.name
-                    }
+                    value={pick.name}
                     onChange={(e) =>
                       setPick({
                         ...pick,
@@ -4667,9 +4779,7 @@ export default function Invoice() {
                   <input
                     type="number"
                     min={1}
-                    value={
-                      pick.qty
-                    }
+                    value={pick.qty}
                     onChange={(e) =>
                       setPick({
                         ...pick,
@@ -4686,9 +4796,7 @@ export default function Invoice() {
                     type="number"
                     min={0}
                     step="0.01"
-                    value={
-                      pick.price
-                    }
+                    value={pick.price}
                     onChange={(e) =>
                       setPick({
                         ...pick,
@@ -4703,12 +4811,8 @@ export default function Invoice() {
 
                   <button
                     type="button"
-                    onClick={
-                      addItem
-                    }
-                    disabled={
-                      !pick.name.trim()
-                    }
+                    onClick={addItem}
+                    disabled={!pick.name.trim()}
                     className="rounded-lg bg-teal text-white text-sm font-medium px-4 py-2.5 hover:bg-teal-dark disabled:opacity-50 shrink-0"
                   >
 
@@ -4719,9 +4823,7 @@ export default function Invoice() {
                 </div>
 
 
-                {/* =================================================
-                    PRODUCTS ADDED WITH EDIT OPTION
-                    ================================================= */}
+                {/* PRODUCTS ADDED */}
 
                 {items.length > 0 && (
 
@@ -4734,33 +4836,25 @@ export default function Invoice() {
                       ) => (
 
                         <div
-                          key={
-                            index
-                          }
+                          key={index}
                           className="flex items-center justify-between bg-paper rounded-lg px-3 py-2 text-sm"
                         >
 
                           <div>
 
                             <span className="font-medium text-ink">
-                              {
-                                item.name
-                              }
+                              {item.name}
                             </span>
 
                             <span className="text-xs text-slateink ml-2">
-                              x{
-                                item.qty
-                              }
+                              x{item.qty}
                             </span>
 
                             <span className="text-xs text-slateink ml-2">
                               @ Rs{' '}
-                              {
-                                currency(
-                                  item.price
-                                )
-                              }
+                              {currency(
+                                item.price
+                              )}
                             </span>
 
                           </div>
@@ -4768,7 +4862,6 @@ export default function Invoice() {
 
                           <div className="flex items-center gap-2">
 
-                            {/* EDIT BUTTON */}
                             <button
                               type="button"
                               onClick={() =>
@@ -4779,14 +4872,11 @@ export default function Invoice() {
                               className="text-blue-600 hover:text-blue-800"
                             >
 
-                              <Pencil
-                                size={15}
-                              />
+                              <Pencil size={15} />
 
                             </button>
 
 
-                            {/* DELETE BUTTON */}
                             <button
                               type="button"
                               onClick={() =>
@@ -4797,9 +4887,7 @@ export default function Invoice() {
                               className="text-coral hover:text-red-700"
                             >
 
-                              <Trash2
-                                size={15}
-                              />
+                              <Trash2 size={15} />
 
                             </button>
 
@@ -4820,12 +4908,13 @@ export default function Invoice() {
                         </p>
 
                         <p className="text-lg font-bold text-ink">
+
                           Rs{' '}
-                          {
-                            currency(
-                              total
-                            )
-                          }
+
+                          {currency(
+                            total
+                          )}
+
                         </p>
 
                       </div>
@@ -4839,44 +4928,37 @@ export default function Invoice() {
               </div>
 
 
-              {/* =================================================
-                  ERROR
-                  ================================================= */}
+              {/* ERROR */}
 
               {error && (
 
                 <p className="text-xs font-medium text-coral bg-coral-light rounded-lg px-3 py-2">
-                  {
-                    error
-                  }
+                  {error}
                 </p>
 
               )}
 
 
-              {/* =================================================
-                  SAVE BUTTON
-                  ================================================= */}
+              {/* SAVE BUTTON */}
 
               <button
                 type="submit"
                 disabled={
                   saving ||
                   !customerId ||
+                  !invoiceDate ||
                   items.length === 0
                 }
                 className="w-full rounded-lg bg-ink text-white text-sm font-medium py-2.5 hover:bg-inkSoft transition-colors disabled:opacity-60"
               >
 
-                {
-                  saving
-                    ? editingInvoice
-                      ? 'Updating…'
-                      : 'Saving…'
-                    : editingInvoice
-                    ? 'Update Invoice'
-                    : 'Generate Invoice'
-                }
+                {saving
+                  ? editingInvoice
+                    ? 'Updating…'
+                    : 'Saving…'
+                  : editingInvoice
+                  ? 'Update Invoice'
+                  : 'Generate Invoice'}
 
               </button>
 
@@ -4889,16 +4971,12 @@ export default function Invoice() {
       </div>
 
 
-      {/* ==========================================================
-          PREVIEW
-          ========================================================== */}
+      {/* PREVIEW */}
 
       {preview && (
 
         <InvoicePreview
-          invoice={
-            preview
-          }
+          invoice={preview}
           onClose={() =>
             setPreview(null)
           }
@@ -4907,9 +4985,7 @@ export default function Invoice() {
       )}
 
 
-      {/* ==========================================================
-          DELETE CONFIRMATION MODAL
-          ========================================================== */}
+      {/* DELETE CONFIRMATION */}
 
       {deleteConfirm && (
 
@@ -4930,9 +5006,7 @@ export default function Invoice() {
                 className="text-slateink hover:text-ink"
               >
 
-                <X
-                  size={20}
-                />
+                <X size={20} />
 
               </button>
 
@@ -4970,19 +5044,13 @@ export default function Invoice() {
                   }
                   className="flex-1 rounded-lg border border-line text-ink text-sm font-medium py-2.5 hover:bg-paper transition-colors"
                 >
-
                   Cancel
-
                 </button>
 
 
                 <button
-                  onClick={
-                    handleDeleteInvoice
-                  }
-                  disabled={
-                    deleting
-                  }
+                  onClick={handleDeleteInvoice}
+                  disabled={deleting}
                   className="flex-1 rounded-lg bg-coral text-white text-sm font-medium py-2.5 hover:bg-red-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
                 >
 
@@ -4990,9 +5058,7 @@ export default function Invoice() {
                     'Deleting…'
                   ) : (
                     <>
-                      <Trash2
-                        size={16}
-                      />
+                      <Trash2 size={16} />
                       Delete
                     </>
                   )}
@@ -5010,9 +5076,7 @@ export default function Invoice() {
       )}
 
 
-      {/* ==========================================================
-          EDIT PRODUCT MODAL
-          ========================================================== */}
+      {/* EDIT PRODUCT MODAL */}
 
       {editingProductIndex !== null && (
 
@@ -5027,15 +5091,11 @@ export default function Invoice() {
               </h3>
 
               <button
-                onClick={
-                  closeEditProduct
-                }
+                onClick={closeEditProduct}
                 className="text-slateink hover:text-ink"
               >
 
-                <X
-                  size={20}
-                />
+                <X size={20} />
 
               </button>
 
@@ -5052,9 +5112,7 @@ export default function Invoice() {
 
                 <input
                   type="text"
-                  value={
-                    editProduct.name
-                  }
+                  value={editProduct.name}
                   onChange={(e) =>
                     setEditProduct({
                       ...editProduct,
@@ -5080,9 +5138,7 @@ export default function Invoice() {
                   <input
                     type="number"
                     min={1}
-                    value={
-                      editProduct.qty
-                    }
+                    value={editProduct.qty}
                     onChange={(e) =>
                       setEditProduct({
                         ...editProduct,
@@ -5108,9 +5164,7 @@ export default function Invoice() {
                     type="number"
                     min={0}
                     step="0.01"
-                    value={
-                      editProduct.price
-                    }
+                    value={editProduct.price}
                     onChange={(e) =>
                       setEditProduct({
                         ...editProduct,
@@ -5129,18 +5183,14 @@ export default function Invoice() {
 
 
               <button
-                onClick={
-                  saveEditProduct
-                }
+                onClick={saveEditProduct}
                 disabled={
                   !editProduct.name.trim()
                 }
                 className="w-full rounded-lg bg-blue-600 text-white text-sm font-medium py-2.5 hover:bg-blue-700 transition-colors disabled:opacity-50 mt-2 flex items-center justify-center gap-2"
               >
 
-                <Save
-                  size={16}
-                />
+                <Save size={16} />
 
                 Save Product
 
@@ -5165,9 +5215,7 @@ export default function Invoice() {
    CONVERT FIREBASE INVOICE
    ================================================================ */
 
-function convertInvoiceToPreview(
-  invoice
-) {
+function convertInvoiceToPreview(invoice) {
 
   return {
 
@@ -5248,11 +5296,6 @@ function InvoicePreview({
   onClose
 }) {
 
-
-  /* ============================================================
-     PRINT
-     ============================================================ */
-
   function printInvoice() {
 
     window.print()
@@ -5265,9 +5308,7 @@ function InvoicePreview({
     <div className="invoice-preview-overlay fixed inset-0 z-[9999] bg-black/60 overflow-y-auto p-4 sm:p-8">
 
 
-      {/* ==========================================================
-          TOP CONTROLS
-          ========================================================== */}
+      {/* TOP CONTROLS */}
 
       <div className="invoice-preview-controls max-w-[900px] mx-auto mb-4 flex items-center justify-between">
 
@@ -5278,9 +5319,7 @@ function InvoicePreview({
           </p>
 
           <p className="text-white/70 text-xs">
-            {
-              invoice.invoiceNumber
-            }
+            {invoice.invoiceNumber}
           </p>
 
         </div>
@@ -5289,15 +5328,11 @@ function InvoicePreview({
         <div className="flex items-center gap-2">
 
           <button
-            onClick={
-              printInvoice
-            }
+            onClick={printInvoice}
             className="inline-flex items-center gap-2 rounded-lg bg-white text-ink px-4 py-2 text-sm font-medium hover:bg-gray-100"
           >
 
-            <Printer
-              size={16}
-            />
+            <Printer size={16} />
 
             Print / Save as PDF
 
@@ -5305,15 +5340,11 @@ function InvoicePreview({
 
 
           <button
-            onClick={
-              onClose
-            }
+            onClick={onClose}
             className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-white/10 text-white hover:bg-white/20"
           >
 
-            <X
-              size={18}
-            />
+            <X size={18} />
 
           </button>
 
@@ -5322,25 +5353,22 @@ function InvoicePreview({
       </div>
 
 
-      {/* ==========================================================
-          PRINT AREA
-          ========================================================== */}
+      {/* PRINT AREA */}
 
-      <div className="invoice-print-area" id="invoice-print-area">
+      <div
+        className="invoice-print-area"
+        id="invoice-print-area"
+      >
 
         <div className="invoice-sheet">
 
 
-          {/* ======================================================
-              HEADER
-              ====================================================== */}
+          {/* HEADER */}
 
           <div className="invoice-header">
 
 
-            {/* ====================================================
-                COMPANY
-                ==================================================== */}
+            {/* COMPANY */}
 
             <div className="invoice-company">
 
@@ -5359,19 +5387,22 @@ function InvoicePreview({
                 }}
               />
 
-{(invoice.companyName || COMPANY_NAME) && (
-  <div className="invoice-company-name">
-    {invoice.companyName || COMPANY_NAME}
-  </div>
-)}
+              {(invoice.companyName || COMPANY_NAME) && (
+
+                <div className="invoice-company-name">
+
+                  {invoice.companyName ||
+                    COMPANY_NAME}
+
+                </div>
+
+              )}
 
 
               <div className="invoice-company-address">
 
-                {
-                  invoice.companyAddress ||
-                  COMPANY_ADDRESS
-                }
+                {invoice.companyAddress ||
+                  COMPANY_ADDRESS}
 
               </div>
 
@@ -5380,9 +5411,7 @@ function InvoicePreview({
 
                 <div className="invoice-company-address">
 
-                  {
-                    invoice.companyPhone
-                  }
+                  {invoice.companyPhone}
 
                 </div>
 
@@ -5391,27 +5420,18 @@ function InvoicePreview({
             </div>
 
 
-            {/* ====================================================
-                RIGHT SIDE
-                ==================================================== */}
+            {/* RIGHT SIDE */}
 
             <div className="invoice-right-header">
-
 
               <div className="invoice-tax-box">
 
                 <div>
-                  NTN # {
-                    invoice.companyNTN ||
-                    COMPANY_NTN
-                  }
+                  NTN # {invoice.companyNTN || COMPANY_NTN}
                 </div>
 
                 <div>
-                  STRN # {
-                    invoice.companySTRN ||
-                    COMPANY_STRN
-                  }
+                  STRN # {invoice.companySTRN || COMPANY_STRN}
                 </div>
 
 
@@ -5431,9 +5451,7 @@ function InvoicePreview({
 
                 <div className="invoice-number">
 
-                  {
-                    invoice.invoiceNumber
-                  }
+                  {invoice.invoiceNumber}
 
                 </div>
 
@@ -5446,11 +5464,9 @@ function InvoicePreview({
 
                   <span>
 
-                    {
-                      formatInvoiceDate(
-                        invoice.date
-                      )
-                    }
+                    {formatInvoiceDate(
+                      invoice.date
+                    )}
 
                   </span>
 
@@ -5464,12 +5480,7 @@ function InvoicePreview({
                   </span>
 
                   <span>
-
-                    {
-                      invoice.poNumber ||
-                      ''
-                    }
-
+                    {invoice.poNumber || ''}
                   </span>
 
                 </div>
@@ -5483,13 +5494,11 @@ function InvoicePreview({
 
                   <span>
 
-                    {
-                      invoice.poDate
-                        ? formatInvoiceDate(
-                            invoice.poDate
-                          )
-                        : ''
-                    }
+                    {invoice.poDate
+                      ? formatInvoiceDate(
+                          invoice.poDate
+                        )
+                      : ''}
 
                   </span>
 
@@ -5502,9 +5511,7 @@ function InvoicePreview({
           </div>
 
 
-          {/* ======================================================
-              BUYER
-              ====================================================== */}
+          {/* BUYER */}
 
           <div className="invoice-buyer-box">
 
@@ -5519,10 +5526,7 @@ function InvoicePreview({
 
               <div className="invoice-buyer-name">
 
-                {
-                  invoice.customer?.name ||
-                  ''
-                }
+                {invoice.customer?.name || ''}
 
               </div>
 
@@ -5530,11 +5534,7 @@ function InvoicePreview({
               {invoice.customer?.company && (
 
                 <div>
-
-                  {
-                    invoice.customer.company
-                  }
-
+                  {invoice.customer.company}
                 </div>
 
               )}
@@ -5543,11 +5543,7 @@ function InvoicePreview({
               {invoice.customer?.address && (
 
                 <div>
-
-                  {
-                    invoice.customer.address
-                  }
-
+                  {invoice.customer.address}
                 </div>
 
               )}
@@ -5556,11 +5552,7 @@ function InvoicePreview({
               {invoice.customer?.phone && (
 
                 <div>
-
-                  {
-                    invoice.customer.phone
-                  }
-
+                  {invoice.customer.phone}
                 </div>
 
               )}
@@ -5570,15 +5562,7 @@ function InvoicePreview({
           </div>
 
 
-          {/* ======================================================
-              PRODUCT TABLE
-
-              EXACT FULL GRID
-
-              Quantity | Unit | Description | Unit Price | Amount
-
-              EVERY COLUMN HAS 4 BORDERS.
-          ====================================================== */}
+          {/* PRODUCT TABLE */}
 
           <table className="invoice-table">
 
@@ -5596,10 +5580,6 @@ function InvoicePreview({
 
             </colgroup>
 
-
-            {/* ==================================================
-                TABLE HEADER
-                ================================================== */}
 
             <thead>
 
@@ -5630,10 +5610,6 @@ function InvoicePreview({
             </thead>
 
 
-            {/* ==================================================
-                TABLE BODY
-                ================================================== */}
-
             <tbody>
 
               {(invoice.items || []).map(
@@ -5658,66 +5634,26 @@ function InvoicePreview({
 
                   return (
 
-                    <tr
-                      key={
-                        index
-                      }
-                    >
-
-                      {/* QUANTITY */}
+                    <tr key={index}>
 
                       <td className="quantity-cell">
-
-                        {
-                          qty
-                        }
-
+                        {qty}
                       </td>
-
-
-                      {/* UNIT */}
 
                       <td>
-
                         PCS
-
                       </td>
-
-
-                      {/* DESCRIPTION */}
 
                       <td className="description-cell">
-
-                        {
-                          item.name
-                        }
-
+                        {item.name}
                       </td>
 
-
-                      {/* UNIT PRICE */}
-
                       <td className="number-cell">
-
-                        {
-                          currency(
-                            price
-                          )
-                        }
-
+                        {currency(price)}
                       </td>
 
-
-                      {/* AMOUNT */}
-
                       <td className="number-cell">
-
-                        {
-                          currency(
-                            amount
-                          )
-                        }
-
+                        {currency(amount)}
                       </td>
 
                     </tr>
@@ -5727,10 +5663,6 @@ function InvoicePreview({
                 }
               )}
 
-
-              {/* =================================================
-                  EMPTY ROWS
-                  ================================================= */}
 
               {Array.from({
 
@@ -5751,20 +5683,14 @@ function InvoicePreview({
                 ) => (
 
                   <tr
-                    key={
-                      `empty-${index}`
-                    }
+                    key={`empty-${index}`}
                     className="invoice-empty-row"
                   >
 
                     <td></td>
-
                     <td></td>
-
                     <td></td>
-
                     <td></td>
-
                     <td></td>
 
                   </tr>
@@ -5777,43 +5703,33 @@ function InvoicePreview({
           </table>
 
 
-          {/* ======================================================
-              TOTAL
-
-              ONLY TOTAL
-              NO SALES TAX TEXT
-          ====================================================== */}
+          {/* TOTAL */}
 
           <div className="invoice-total-wrapper">
 
             <div className="invoice-total-label">
-
               Total
-
             </div>
-
 
             <div className="invoice-total-value">
 
-              {
-                currency(
-                  invoice.total || 0
-                )
-              }
+              {currency(
+                invoice.total || 0
+              )}
 
             </div>
 
           </div>
 
 
-          {/* ======================================================
-              FOOTER NOTE
-              ====================================================== */}
+          {/* FOOTER */}
 
           <div className="invoice-footer-note">
 
             <p className="text-center text-[9px] text-gray-500 mt-4 pt-2 border-t border-gray-300">
+
               Note: This is a computer generated invoice, does not require any stamp or signature.
+
             </p>
 
           </div>
@@ -5834,18 +5750,14 @@ function InvoicePreview({
    DATE FORMAT
    ================================================================ */
 
-function formatInvoiceDate(
-  value
-) {
+function formatInvoiceDate(value) {
 
   if (!value) {
     return ''
   }
 
-
   const date =
     new Date(value)
-
 
   if (
     Number.isNaN(
@@ -5866,7 +5778,6 @@ function formatInvoiceDate(
       '0'
     )
 
-
   const month =
     String(
       date.getMonth() + 1
@@ -5875,10 +5786,8 @@ function formatInvoiceDate(
       '0'
     )
 
-
   const year =
     date.getFullYear()
-
 
   return `${day}/${month}/${year}`
 
@@ -5890,10 +5799,6 @@ function formatInvoiceDate(
    ================================================================ */
 
 const invoicePrintStyles = `
-
-/* ============================================================
-   A4 SHEET
-   ============================================================ */
 
 .invoice-sheet {
 
@@ -5919,10 +5824,6 @@ const invoicePrintStyles = `
 }
 
 
-/* ============================================================
-   HEADER
-   ============================================================ */
-
 .invoice-header {
 
   display: flex;
@@ -5944,31 +5845,43 @@ const invoicePrintStyles = `
 
 
 .invoice-logo {
+
   width: 42mm;
+
   height: 25mm;
+
   object-fit: contain;
+
   object-position: left center;
+
   display: block;
+
   margin-bottom: 0.5mm;
+
 }
+
 
 .invoice-company-name {
+
   font-size: 16px;
+
   font-weight: 700;
+
   margin-bottom: 1mm;
+
 }
+
 
 .invoice-company-address {
+
   white-space: pre-line;
+
   font-size: 10px;
+
   line-height: 1.4;
+
 }
 
-
-
-/* ============================================================
-   RIGHT HEADER
-   ============================================================ */
 
 .invoice-right-header {
 
@@ -6070,10 +5983,6 @@ const invoicePrintStyles = `
 }
 
 
-/* ============================================================
-   BUYER
-   ============================================================ */
-
 .invoice-buyer-box {
 
   width: 54%;
@@ -6118,20 +6027,20 @@ const invoicePrintStyles = `
 }
 
 
-/* ============================================================
-   PRODUCT TABLE
-   FULL GRID
-   ============================================================ */
-
 .invoice-table {
+
   width: 100%;
+
   table-layout: fixed;
+
   border-collapse: collapse;
+
   border: 1px solid #222;
+
   font-size: 10px;
+
 }
 
-/* COLUMN WIDTHS */
 
 .invoice-table .qty-col {
   width: 13%;
@@ -6154,123 +6063,131 @@ const invoicePrintStyles = `
 }
 
 
-/* HEADER */
-
 .invoice-table thead th {
+
   padding: 2.8mm 1.8mm;
+
   font-weight: 700;
+
   text-align: left;
 
-  /* vertical borders */
   border-left: 1px solid #222;
+
   border-right: 1px solid #222;
 
-  /* header bottom line */
   border-bottom: 1px solid #222;
 
   border-top: 0;
+
 }
 
 
-/* PRODUCT CELLS */
-
 .invoice-table tbody td {
+
   padding: 2.2mm 1.8mm;
+
   height: 8mm;
+
   vertical-align: top;
 
-  /* ONLY VERTICAL LINES */
   border-left: 1px solid #222;
+
   border-right: 1px solid #222;
 
-  /* NO HORIZONTAL LINES */
   border-top: 0 !important;
+
   border-bottom: 0 !important;
 
   background: transparent !important;
+
 }
 
-
-/* LAST ROW */
 
 .invoice-table tbody tr:last-child td {
+
   border-bottom: 0 !important;
+
 }
 
-
-/* QUANTITY */
 
 .invoice-table .quantity-cell {
+
   text-align: center;
+
 }
 
-
-/* DESCRIPTION */
 
 .invoice-table .description-cell {
+
   text-align: left;
+
 }
 
-
-/* PRICE + AMOUNT */
 
 .invoice-table .number-cell {
+
   text-align: right;
+
   white-space: nowrap;
+
 }
 
 
-/* EMPTY ROWS */
-
 .invoice-table tbody .invoice-empty-row td {
+
   height: 11mm;
 
   border-left: 1px solid #222 !important;
+
   border-right: 1px solid #222 !important;
 
   border-top: 0 !important;
+
   border-bottom: 0 !important;
+
 }
 
-
-/* ============================================================
-   IMPORTANT:
-   OUTER LEFT + RIGHT BORDER
-   ============================================================ */
 
 .invoice-table th:first-child,
 .invoice-table td:first-child {
+
   border-left: 1px solid #222 !important;
+
 }
+
 
 .invoice-table th:last-child,
 .invoice-table td:last-child {
+
   border-right: 1px solid #222 !important;
+
 }
 
-
-/* ============================================================
-   TABLE BOTTOM BORDER
-   ============================================================ */
 
 .invoice-table tbody tr:last-child td {
+
   border-bottom: 1px solid #222 !important;
+
 }
 
-
-/* ============================================================
-   TOTAL
-   ============================================================ */
 
 .invoice-total-wrapper {
+
   display: flex;
+
   justify-content: flex-end;
+
   margin-top: 5mm;
+
   gap: 0;
+
 }
 
+
 .invoice-total-label {
+
   width: 17%;
+
   box-sizing: border-box;
 
   border: 1px solid #222;
@@ -6278,13 +6195,18 @@ const invoicePrintStyles = `
   padding: 2.8mm 3mm;
 
   font-size: 10px;
+
   font-weight: 700;
 
   text-align: center;
+
 }
 
+
 .invoice-total-value {
+
   width: 17%;
+
   box-sizing: border-box;
 
   border: 1px solid #222;
@@ -6292,134 +6214,219 @@ const invoicePrintStyles = `
   padding: 2.8mm 3mm;
 
   font-size: 10px;
+
   font-weight: 700;
 
   text-align: right;
+
 }
 
-
-/* ============================================================
-   FOOTER NOTE
-   ============================================================ */
 
 .invoice-footer-note {
+
   margin-top: 8mm;
+
   padding-top: 2mm;
+
   border-top: 1px solid #ccc;
+
 }
+
 
 .invoice-footer-note p {
+
   text-align: center;
+
   font-size: 9px;
+
   color: #888;
+
   margin: 0;
+
   font-style: italic;
+
 }
 
-
-/* ============================================================
-   PRINT
-   ============================================================ */
 
 @media print {
 
   @page {
+
     size: A4 portrait;
+
     margin: 0;
+
   }
+
 
   html,
   body {
+
     width: 210mm;
+
     min-height: 297mm;
+
     margin: 0 !important;
+
     padding: 0 !important;
+
     background: white !important;
+
   }
 
+
   body * {
+
     visibility: hidden !important;
+
   }
+
 
   .invoice-print-area,
   .invoice-print-area * {
+
     visibility: visible !important;
+
   }
+
 
   .invoice-preview-overlay {
+
     position: static !important;
+
     width: 210mm !important;
+
     min-height: 297mm !important;
+
     padding: 0 !important;
+
     margin: 0 !important;
+
     overflow: visible !important;
+
     background: white !important;
+
   }
+
 
   .invoice-preview-controls {
+
     display: none !important;
+
   }
+
 
   .invoice-print-area {
+
     position: absolute !important;
+
     left: 0 !important;
+
     top: 0 !important;
+
     width: 210mm !important;
+
     margin: 0 !important;
+
     padding: 0 !important;
+
   }
+
 
   .invoice-sheet {
+
     width: 210mm !important;
+
     min-height: 297mm !important;
+
     margin: 0 !important;
+
     padding: 15mm 17mm !important;
+
     box-sizing: border-box !important;
+
     box-shadow: none !important;
+
   }
+
 
   .invoice-table {
+
     width: 100% !important;
+
     border-collapse: collapse !important;
+
     border: 1px solid #222 !important;
+
   }
+
 
   .invoice-table thead th {
+
     border-left: 1px solid #222 !important;
+
     border-right: 1px solid #222 !important;
+
     border-top: 0 !important;
+
     border-bottom: 1px solid #222 !important;
+
   }
+
 
   .invoice-table tbody td {
+
     border-left: 1px solid #222 !important;
+
     border-right: 1px solid #222 !important;
+
     border-top: 0 !important;
+
     border-bottom: 0 !important;
+
     background: transparent !important;
+
   }
+
 
   .invoice-table tbody tr:last-child td {
+
     border-bottom: 1px solid #222 !important;
+
   }
+
 
   .invoice-table tbody .invoice-empty-row td {
+
     border-left: 1px solid #222 !important;
+
     border-right: 1px solid #222 !important;
+
     border-top: 0 !important;
+
     border-bottom: 0 !important;
+
   }
+
 
   .invoice-total-label {
+
     border: 1px solid #222 !important;
+
   }
+
 
   .invoice-total-value {
+
     border: 1px solid #222 !important;
+
   }
 
+
   .invoice-footer-note {
+
     border-top: 1px solid #ccc !important;
+
   }
 
 }
@@ -6460,7 +6467,6 @@ if (
 
     document.head.appendChild(
       style
-
     )
 
   }
