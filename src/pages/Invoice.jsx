@@ -10150,7 +10150,7 @@ const invoicePrintStyles = `
 
 .invoice-table tbody td {
 
-  padding: 2.2mm 1.8mm;
+  padding: 1.5mm 1.8mm;
 
   height: 6mm;
 
@@ -10196,7 +10196,7 @@ const invoicePrintStyles = `
 
 .invoice-table tbody .invoice-empty-row td {
 
-  height: 8mm;
+  height: 1mm;
 
   border-left: 1px solid #222 !important;
 
@@ -10444,7 +10444,7 @@ const invoicePrintStyles = `
 
   padding: 0.8mm 0;
 
-  line-height: 1.45;
+  line-height: 1.00;
 
 }
 
@@ -10479,7 +10479,7 @@ const invoicePrintStyles = `
 
 .invoice-footer-note {
 
-  margin-top: 8mm;
+  margin-top: 4mm;
 
   padding-top: 2mm;
 
