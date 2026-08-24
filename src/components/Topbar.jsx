@@ -22,6 +22,7 @@ const BASE_NAV = [
   { to: '/customers', label: 'Customers', icon: Users },
   { to: '/inventory', label: 'Inventory', icon: Boxes },
   { to: '/challan', label: 'Delivery Challan', icon: FileText },
+  { to: '/demo-challan', label: 'Demo Challan', icon: FileText },
   { to: '/invoice', label: 'Invoice', icon: Receipt },
   { to: '/quotation', label: 'Quotation', icon: FileSpreadsheet },
   { to: '/warranty', label: 'Warranty Validator', icon: ShieldCheck }

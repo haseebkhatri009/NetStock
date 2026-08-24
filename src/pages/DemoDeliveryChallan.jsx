@@ -1428,7 +1428,7 @@ export default function DemoDeliveryChallan() {
           />
 
           <p className="font-medium text-ink">
-            Abhi tak koi Demo DC nahi banaya
+            No Demo DC has been created yet.
           </p>
 
         </div>
