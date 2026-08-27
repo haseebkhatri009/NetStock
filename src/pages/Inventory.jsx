@@ -4670,6 +4670,9 @@ const PRODUCT_NAMES = [
   'GRP2616P',
   'GRP2624',
   'GRP2634P',
+  'GWN7001',
+  'GWN7002',
+  'GWN7003',
   'GWN7600',
   'GWN7605',
   'GWN7630',
@@ -4780,6 +4783,16 @@ const PRODUCT_CATEGORIES = {
   GRP2624: 'IP Phone',
   GRP2634P: 'IP Phone',
 
+
+
+  /* =========================
+     Routers
+     ========================= */
+
+  GWN7001: 'Router',
+  GWN7002: 'Router',
+  GWN7003: 'Router',
+
   /* =========================
      ACCESS POINTS
      ========================= */
@@ -4798,17 +4811,17 @@ const PRODUCT_CATEGORIES = {
      NETWORK SWITCHES
      ========================= */
 
-  GWN7801P: 'Network Switch',
-  GWN7802P: 'Network Switch',
-  GWN7803P: 'Network Switch',
-  GWN7806P: 'Network Switch',
-  GWN7811P: 'Network Switch',
-  GWN7812P: 'Network Switch',
-  GWN7813P: 'Network Switch',
-  GWN7816P: 'Network Switch',
-  GWN7830: 'Network Switch',
-  GWN7831: 'Network Switch',
-  GWN7832: 'Network Switch',
+  GWN7801P: 'Switch',
+  GWN7802P: 'Switch',
+  GWN7803P: 'Switch',
+  GWN7806P: 'Switch',
+  GWN7811P: 'Switch',
+  GWN7812P: 'Switch',
+  GWN7813P: 'Switch',
+  GWN7816P: 'Switch',
+  GWN7830: 'Switch',
+  GWN7831: 'Switch',
+  GWN7832: 'Switch',
 
   /* =========================
      INTERCOM / SPEAKER
@@ -4953,6 +4966,8 @@ const PRODUCT_IMAGES = {
 
   GRP2634P:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQEEcSxPoUZnQ-w6bKaaxR8bbQ8CrL60C7bNV3VQlxlIA&s=10',
+     GWN7001:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQxdYLBKWoDCUFBr5Ks51wsXFKUPTjbyRUrp29HBzONjw&s=10', 
 
   GWN7600:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ64VKR6Ih5Kp044lyJewroCh2NQA2OMq2TKf-Zi2t6Gw&s',
