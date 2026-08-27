@@ -4658,6 +4658,7 @@ const PRODUCT_NAMES = [
   'GXP2170',
   'GXP2200',
   'GBX20',
+  'PoE_Injector',
   'GRP2601P',
   'GRP2601W',
   'GRP2602P',
@@ -4765,6 +4766,8 @@ const PRODUCT_CATEGORIES = {
      ========================= */
 
   GBX20: 'Accessories',
+  PoE_Injector: 'Accessories',
+
 
   /* =========================
      GRP IP PHONES
@@ -4930,6 +4933,8 @@ const PRODUCT_IMAGES = {
 
   GBX20:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSZysabNyHr8cnEN-vyvJzKBNszdtU0V1tO67hsky_JIA&s',
+  PoE_Injector:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR9bqNiXxN0CmFkiSnMeCdnVegWL6MT4SE9JUvYUlAymg&s=10',
 
   GRP2601P:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIQsz_pSIKsZ753LoC-_bjHW4dUxI9E3yPgOadLwLOPA&s=10',
