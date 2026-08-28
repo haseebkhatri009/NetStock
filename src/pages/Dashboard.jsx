@@ -2520,6 +2520,52 @@ function getInvoiceFinalAmount(invoice) {
 
 
 /* ============================================================
+   HELPER
+   GET ITEM QUANTITY SAFELY
+   ============================================================ */
+
+function getItemQuantity(item) {
+  if (!item) return 0
+
+  // Try different possible quantity field names
+  const qty = 
+    item?.qty ??
+    item?.quantity ??
+    item?.itemQty ??
+    item?.itemQuantity ??
+    item?.qtyOrdered ??
+    0
+
+  return Math.max(0, Number(qty) || 0)
+}
+
+
+/* ============================================================
+   HELPER
+   GET TOTAL UNITS FROM DOCUMENT ITEMS
+   ============================================================ */
+
+function getTotalUnitsFromDocument(doc) {
+  if (!doc) return 0
+
+  const items = doc?.items || []
+  
+  if (!Array.isArray(items) || items.length === 0) {
+    return 0
+  }
+
+  let totalUnits = 0
+
+  items.forEach((item) => {
+    const qty = getItemQuantity(item)
+    totalUnits += qty
+  })
+
+  return totalUnits
+}
+
+
+/* ============================================================
    MAIN DASHBOARD
    ============================================================ */
 
@@ -3147,116 +3193,45 @@ export default function Dashboard() {
 
 
   /* ============================================================
-     SALES / DISPATCH TREND
+     SALES / DISPATCH TREND - ONLY FROM DELIVERY CHALLANS
      ============================================================ */
 
   const salesTrend =
     useMemo(() => {
 
-      const all = [
-
-        ...(challans || []),
-
-        ...(invoices || [])
-
-      ]
-
+      // Only use Delivery Challans, NOT invoices
+      if (!challans || challans.length === 0) {
+        return []
+      }
 
       const map = {}
 
+      challans.forEach((challan) => {
+        // Skip if no date
+        if (!challan?.date) return
 
-      all.forEach((doc) => {
+        // Get total units from this challan using the helper function
+        const units = getTotalUnitsFromDocument(challan)
 
-        if (!doc.date) return
+        // Skip if zero units (shouldn't happen but just in case)
+        if (units <= 0) return
 
-
-        let units = 0
-
-
-        if (
-          Array.isArray(
-            doc.items
-          )
-        ) {
-
-          units =
-            doc.items.reduce(
-
-              (
-                sum,
-                item
-              ) => {
-
-                const qty =
-                  Number(
-                    item?.qty ??
-                    item?.quantity ??
-                    1
-                  ) || 0
-
-
-                return (
-                  sum +
-                  qty
-                )
-
-              },
-
-              0
-
-            )
-
-        }
-
-
-        map[doc.date] =
-          (
-            map[doc.date] ||
-            0
-          ) +
-          units
-
+        // Add to map
+        map[challan.date] = (map[challan.date] || 0) + units
       })
 
+      // Convert to array and sort by date
+      const result = Object.entries(map)
+        .sort((a, b) => new Date(a[0]) - new Date(b[0]))
+        .slice(-14) // Last 14 days
+        .map(([date, units]) => ({
+          date: formatDate(date).replace(/, \d{4}$/, ''),
+          units: units
+        }))
 
-      return Object.entries(map)
+      return result
 
-        .sort(
-          (
-            a,
-            b
-          ) =>
-            new Date(a[0]) -
-            new Date(b[0])
-        )
-
-        .slice(-14)
-
-        .map(
-          (
-            [
-              date,
-              units
-            ]
-          ) => ({
-
-            date:
-              formatDate(
-                date
-              ).replace(
-                /, \d{4}$/,
-                ''
-              ),
-
-            units
-
-          })
-        )
-
-    }, [
-      challans,
-      invoices
-    ])
+    }, [challans])
 
 
   /* ============================================================
@@ -3964,14 +3939,14 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
             {/* ==================================================
-                UNITS DISPATCHED
+                UNITS DISPATCHED - ONLY FROM DELIVERY CHALLANS
                 ================================================== */}
 
             <div className="lg:col-span-2 bg-surface rounded-2xl border border-line shadow-card p-5">
 
               <p className="font-display font-semibold text-ink mb-4">
 
-                Units Dispatched (recent)
+                Units Dispatched (from Delivery Challans)
 
               </p>
 
@@ -3982,7 +3957,7 @@ export default function Dashboard() {
 
                   <p className="text-sm text-slateink">
 
-                    Abhi tak koi dispatch nahi hua.
+                    Abhi tak koi Delivery Challan nahi bana.
 
                   </p>
 
