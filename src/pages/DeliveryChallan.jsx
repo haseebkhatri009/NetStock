@@ -12253,7 +12253,6 @@
 
 
 
-
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { ref, push, onValue, update, get, set } from 'firebase/database'
 import {
@@ -12398,6 +12397,44 @@ async function incrementDcCounter(companyId) {
 }
 
 /* ============================================================
+   CHECK IF DC NUMBER EXISTS (Not Deleted)
+   ============================================================ */
+
+async function checkDcNumberExists(companyId, dcNumber, excludeId = null) {
+  try {
+    const challansRef = ref(
+      db,
+      `companies/${companyId}/challans`
+    )
+
+    const snapshot = await get(challansRef)
+
+    if (!snapshot.exists()) {
+      return false
+    }
+
+    const challans = snapshot.val()
+
+    // Check if any challan has this DC number
+    for (const [id, challan] of Object.entries(challans)) {
+      // Skip if we're editing this challan
+      if (excludeId && id === excludeId) {
+        continue
+      }
+
+      if (challan.dcNumber === dcNumber) {
+        return true
+      }
+    }
+
+    return false
+  } catch (error) {
+    console.error('Error checking DC number:', error)
+    return false
+  }
+}
+
+/* ============================================================
    EMPTY ITEM
    ============================================================ */
 
@@ -12447,6 +12484,7 @@ export default function DeliveryChallan() {
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [dcNumberError, setDcNumberError] = useState('')
 
   /* ============================================================
      LOAD DATA
@@ -12582,6 +12620,43 @@ export default function DeliveryChallan() {
     customerId,
     editingChallan
   ])
+
+  /* ============================================================
+     VALIDATE DC NUMBER ON CHANGE
+     ============================================================ */
+
+  const validateDcNumber = async (number) => {
+    if (!number || number.trim() === '') {
+      setDcNumberError('DC Number is required')
+      return false
+    }
+
+    // Format validation
+    const dcPattern = /^DC-\d{8}-\d{4}$/
+    if (!dcPattern.test(number)) {
+      setDcNumberError('Invalid format. Use DC-YYYYMMDD-0001')
+      return false
+    }
+
+    // Check if exists (only for new challans, not for editing)
+    if (!editingChallan) {
+      const exists = await checkDcNumberExists(companyId, number)
+      if (exists) {
+        setDcNumberError('This DC number is already in use. Please use a different number.')
+        return false
+      }
+    } else {
+      // For editing, check if exists excluding current challan
+      const exists = await checkDcNumberExists(companyId, number, editingChallan.id)
+      if (exists) {
+        setDcNumberError('This DC number is already in use by another challan.')
+        return false
+      }
+    }
+
+    setDcNumberError('')
+    return true
+  }
 
   /* ============================================================
      AVAILABLE STOCK
@@ -12767,6 +12842,7 @@ export default function DeliveryChallan() {
     setPickQty(1)
 
     setError('')
+    setDcNumberError('')
     setEditingChallan(null)
   }
 
@@ -12829,6 +12905,7 @@ export default function DeliveryChallan() {
 
   function openEditChallan(challan) {
     setError('')
+    setDcNumberError('')
 
     setEditingChallan(challan)
 
@@ -13709,6 +13786,7 @@ export default function DeliveryChallan() {
     e.preventDefault()
 
     setError('')
+    setDcNumberError('')
 
     if (
       !customerId ||
@@ -13740,6 +13818,12 @@ export default function DeliveryChallan() {
         'Customer nahi mila.'
       )
 
+      return
+    }
+
+    // Validate DC number
+    const isDcValid = await validateDcNumber(dcNumber)
+    if (!isDcValid) {
       return
     }
 
@@ -14285,15 +14369,25 @@ export default function DeliveryChallan() {
                 <input
                   type="text"
                   value={dcNumber}
-                  onChange={(e) =>
-                    setDcNumber(
-                      e.target.value
-                    )
-                  }
-                  className="input mt-1"
+                  onChange={(e) => {
+                    setDcNumber(e.target.value)
+                    setDcNumberError('')
+                  }}
+                  onBlur={() => {
+                    if (dcNumber.trim()) {
+                      validateDcNumber(dcNumber)
+                    }
+                  }}
+                  className={`input mt-1 ${dcNumberError ? 'border-red-500 focus:ring-red-500' : ''}`}
                   placeholder="DC-YYYYMMDD-0001"
                   required
                 />
+
+                {dcNumberError && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {dcNumberError}
+                  </p>
+                )}
 
                 <small className="text-xs text-slateink mt-1 block">
                   Format: DC-YYYYMMDD-0001
@@ -14964,7 +15058,7 @@ export default function DeliveryChallan() {
 
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || !!dcNumberError}
               className="w-full rounded-lg bg-ink text-white text-sm font-medium py-2.5 hover:bg-inkSoft transition-colors disabled:opacity-60"
             >
 
