@@ -399,6 +399,8 @@ const PRODUCT_IMAGES = {
 
   'GRP2634P': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQEEcSxPoUZnQ-w6bKaaxR8bbQ8CrL60C7bNV3VQlxlIA&s=10',
 
+  'GWN7062E': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQFoc3CUvYRNWBfM4i6kA_b0zomlvAdeIwmS5AwPFmfYQ&s=10', 
+
   'GWN7600': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ64VKR6Ih5Kp044lyJewroCh2NQA2OMq2TKf-Zi2t6Gw&s',
 
   'GWN7605': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS0uGSmdSQdmP_Dy89IIs3L55wXAkGBLhqSpG_LuZjRKg&s=10',
