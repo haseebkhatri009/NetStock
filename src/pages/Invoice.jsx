@@ -6743,6 +6743,16 @@ export default function Invoice() {
   const [customerId, setCustomerId] =
     useState('')
 
+  /* ============================================================
+     CUSTOMER SEARCH
+     ============================================================ */
+
+  const [customerSearch, setCustomerSearch] =
+    useState('')
+
+  const [showCustomerDropdown, setShowCustomerDropdown] =
+    useState(false)
+
   const [invoiceNumber, setInvoiceNumber] =
     useState('')
 
@@ -6943,6 +6953,54 @@ export default function Invoice() {
     }
 
   }, [companyId])
+
+
+  /* ============================================================
+     FILTERED CUSTOMERS
+     ============================================================ */
+
+  const filteredCustomers =
+    useMemo(() => {
+
+      const search =
+        customerSearch
+          .trim()
+          .toLowerCase()
+
+      if (!search) {
+        return customers || []
+      }
+
+      return (customers || []).filter(
+        customer => {
+          const name = String(customer.name || '').toLowerCase()
+          const company = String(customer.company || '').toLowerCase()
+          const phone = String(customer.phone || '').toLowerCase()
+          const address = String(customer.address || '').toLowerCase()
+
+          return (
+            name.includes(search) ||
+            company.includes(search) ||
+            phone.includes(search) ||
+            address.includes(search)
+          )
+        }
+      )
+    }, [customers, customerSearch])
+
+
+  /* ============================================================
+     SELECT CUSTOMER
+     ============================================================ */
+
+  function selectCustomer(customer) {
+    setCustomerId(customer.id)
+    setCustomerSearch(
+      `${customer.name || ''}${customer.company ? ` — ${customer.company}` : ''}`
+    )
+    setShowCustomerDropdown(false)
+    setError('')
+  }
 
 
   /* ============================================================
@@ -7212,6 +7270,8 @@ export default function Invoice() {
   function resetForm() {
 
     setCustomerId('')
+    setCustomerSearch('')
+    setShowCustomerDropdown(false)
 
     setInvoiceNumber('')
 
@@ -7364,6 +7424,20 @@ export default function Invoice() {
     setCustomerId(
       invoice.customerId || ''
     )
+
+    const editCustomer =
+      customers?.find(
+        customer =>
+          customer.id === invoice.customerId
+      )
+
+    setCustomerSearch(
+      editCustomer
+        ? `${editCustomer.name || ''}${editCustomer.company ? ` — ${editCustomer.company}` : ''}`
+        : invoice.customerName || ''
+    )
+
+    setShowCustomerDropdown(false)
 
 
     setInvoiceNumber(
@@ -8307,41 +8381,79 @@ export default function Invoice() {
                     Customer *
                   </span>
 
-                  <select
-                    value={customerId}
-                    onChange={(e) =>
-                      setCustomerId(
-                        e.target.value
-                      )
-                    }
-                    className="input mt-1"
-                    required
-                  >
+                  <div className="relative mt-1">
 
-                    <option value="">
-                      Select customer…
-                    </option>
+                    <input
+                      type="text"
+                      value={customerSearch}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setCustomerSearch(value)
 
-                    {(customers || []).map(
-                      customer => (
+                        if (customerId) {
+                          setCustomerId('')
+                        }
 
-                        <option
-                          key={customer.id}
-                          value={customer.id}
-                        >
+                        setShowCustomerDropdown(true)
+                      }}
+                      onFocus={() =>
+                        setShowCustomerDropdown(true)
+                      }
+                      className="input w-full pr-10"
+                      placeholder="Search customer by name, company, phone..."
+                      autoComplete="off"
+                      required={!customerId}
+                    />
 
-                          {customer.name}
-
-                          {customer.company
-                            ? ` — ${customer.company}`
-                            : ''}
-
-                        </option>
-
-                      )
+                    {customerSearch && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomerId('')
+                          setCustomerSearch('')
+                          setShowCustomerDropdown(true)
+                        }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slateink hover:text-ink"
+                        aria-label="Clear customer"
+                      >
+                        <X size={16} />
+                      </button>
                     )}
 
-                  </select>
+                    {showCustomerDropdown && (
+                      <div className="absolute z-[100] left-0 right-0 mt-1 max-h-64 overflow-y-auto rounded-lg border border-line bg-white shadow-lg">
+                        {filteredCustomers.length === 0 ? (
+                          <div className="px-3 py-3 text-sm text-slateink">
+                            No customer found.
+                          </div>
+                        ) : (
+                          filteredCustomers.map(customer => (
+                            <button
+                              key={customer.id}
+                              type="button"
+                              onClick={() => selectCustomer(customer)}
+                              className={`w-full text-left px-3 py-2.5 hover:bg-paper transition-colors border-b border-line last:border-b-0 ${customer.id === customerId ? 'bg-paper' : ''}`}
+                            >
+                              <p className="text-sm font-medium text-ink">
+                                {customer.name}
+                              </p>
+                              {customer.company && (
+                                <p className="text-xs text-slateink mt-0.5">
+                                  {customer.company}
+                                </p>
+                              )}
+                              {customer.phone && (
+                                <p className="text-xs text-slateink mt-0.5">
+                                  {customer.phone}
+                                </p>
+                              )}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+
+                  </div>
 
                 </label>
 
@@ -8823,7 +8935,7 @@ export default function Invoice() {
             <div className="space-y-4">
 
               <p className="text-sm text-ink">
-                Kya aap ye invoice delete karna chahte hain?
+                Are you sure to delete this invoice?
               </p>
 
 

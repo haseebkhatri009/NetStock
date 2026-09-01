@@ -4383,8 +4383,7 @@ export default function Dashboard() {
 
                         <p className="text-sm text-slateink">
 
-                          Is month abhi tak koi invoice nahi bana.
-
+                          Still no invoice in this month.
                         </p>
 
                       </div>
