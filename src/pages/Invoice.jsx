@@ -6482,7 +6482,6 @@
 
 
 
-
 import { useEffect, useMemo, useState } from 'react'
 
 import {
@@ -6503,7 +6502,8 @@ import {
   Printer,
   X,
   Save,
-  Download
+  Download,
+  Search
 } from 'lucide-react'
 
 import { db } from '../firebase'
@@ -6835,6 +6835,14 @@ export default function Invoice() {
 
 
   /* ============================================================
+     SEARCH STATE
+     ============================================================ */
+
+  const [searchTerm, setSearchTerm] =
+    useState('')
+
+
+  /* ============================================================
      LOAD CUSTOMERS AND INVOICES
      ============================================================ */
 
@@ -6987,6 +6995,84 @@ export default function Invoice() {
         }
       )
     }, [customers, customerSearch])
+
+
+  /* ============================================================
+     FILTERED INVOICES FOR SEARCH
+     ============================================================ */
+
+  const filteredInvoices =
+    useMemo(() => {
+
+      if (!invoices) return []
+
+      const search =
+        searchTerm
+          .trim()
+          .toLowerCase()
+
+      if (!search) {
+        return invoices
+      }
+
+      return invoices.filter(
+        invoice => {
+
+          // Search by invoice number
+          if (
+            invoice.invoiceNumber &&
+            invoice.invoiceNumber
+              .toLowerCase()
+              .includes(search)
+          ) {
+            return true
+          }
+
+          // Search by customer name
+          if (
+            invoice.customerName &&
+            invoice.customerName
+              .toLowerCase()
+              .includes(search)
+          ) {
+            return true
+          }
+
+          // Search by customer company
+          if (
+            invoice.customerCompany &&
+            invoice.customerCompany
+              .toLowerCase()
+              .includes(search)
+          ) {
+            return true
+          }
+
+          // Search by date (formatted)
+          if (
+            invoice.date &&
+            formatDate(invoice.date)
+              .toLowerCase()
+              .includes(search)
+          ) {
+            return true
+          }
+
+          // Search by PO number
+          if (
+            invoice.poNumber &&
+            invoice.poNumber
+              .toLowerCase()
+              .includes(search)
+          ) {
+            return true
+          }
+
+          return false
+        }
+      )
+
+    }, [invoices, searchTerm])
 
 
   /* ============================================================
@@ -8093,6 +8179,43 @@ export default function Invoice() {
 
 
         {/* ======================================================
+            SEARCH BAR
+            ====================================================== */}
+
+        <div className="mb-6">
+
+          <div className="relative max-w-md">
+
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) =>
+                setSearchTerm(e.target.value)
+              }
+              className="input w-full pl-9 pr-4"
+              placeholder="Search by invoice #, customer, company, date..."
+            />
+
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slateink hover:text-ink"
+              >
+                <X size={14} />
+              </button>
+            )}
+
+          </div>
+
+          <p className="text-xs text-slateink mt-1">
+            Search by invoice number, customer name, company name, or date
+          </p>
+
+        </div>
+
+
+        {/* ======================================================
             INVOICE LIST
             ====================================================== */}
 
@@ -8100,7 +8223,7 @@ export default function Invoice() {
 
           <Loader />
 
-        ) : invoices.length === 0 ? (
+        ) : filteredInvoices.length === 0 ? (
 
           <div className="border border-dashed border-line rounded-2xl py-16 flex flex-col items-center justify-center text-center">
 
@@ -8110,8 +8233,16 @@ export default function Invoice() {
             />
 
             <p className="font-medium text-ink">
-              Abhi tak koi invoice nahi bana
+              {searchTerm
+                ? 'No matching invoices found'
+                : 'Abhi tak koi invoice nahi bana'}
             </p>
+
+            {searchTerm && (
+              <p className="text-sm text-slateink mt-1">
+                Try searching with different keywords
+              </p>
+            )}
 
           </div>
 
@@ -8154,7 +8285,7 @@ export default function Invoice() {
 
                 <tbody>
 
-                  {invoices.map(
+                  {filteredInvoices.map(
                     invoice => (
 
                       <tr
@@ -10537,8 +10668,6 @@ const invoicePrintStyles = `
 
   box-sizing: border-box;
 
-
-
   padding: 2.5mm 3mm;
 
 }
@@ -10973,8 +11102,6 @@ const invoicePrintStyles = `
     width: 100% !important;
 
     box-sizing: border-box !important;
-
-   
 
     padding: 2.5mm 3mm !important;
 

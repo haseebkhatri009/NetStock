@@ -3946,7 +3946,7 @@ export default function Dashboard() {
 
               <p className="font-display font-semibold text-ink mb-4">
 
-                Units Dispatched (from Delivery Challans)
+                Units Dispatched
 
               </p>
 

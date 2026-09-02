@@ -487,7 +487,9 @@ const PRODUCT_IMAGES = {
 
   'UCM6308': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS8HfUlIFaUdm5vO_GMg4lK0sskQH1C546nYOSemA46AQ&s=10',
 
-  'UCM6308A': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS8HfUlIFaUdm5vO_GMg4lK0sskQH1C546nYOSeldPw&s=10'
+  'UCM6308A': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS8HfUlIFaUdm5vO_GMg4lK0sskQH1C546nYOSeldPw&s=10',
+
+  'ZKTecoK40': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTa1_PrQFpqmmc4GTpAOrsOMoJfbnAYa2PfMo8tkg6_1g&s=10'  
 }
 
 

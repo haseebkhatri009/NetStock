@@ -4619,7 +4619,6 @@
 
 
 
-
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { ref, push, onValue, remove, get, update } from 'firebase/database'
 import {
@@ -4634,7 +4633,8 @@ import {
   PackageX,
   Layers,
   RotateCcw,
-  Eye
+  Eye,
+  Pencil
 } from 'lucide-react'
 import { db } from '../firebase'
 import { useAuth } from '../context/AuthContext'
@@ -4728,7 +4728,11 @@ const PRODUCT_NAMES = [
   'UCM6304',
   'UCM6304A',
   'UCM6308',
-  'UCM6308A'
+  'UCM6308A',
+  'ZKTecoK40',
+  'VVX400',
+  'VVX410'
+
 ]
 
 /* ============================================================
@@ -4787,6 +4791,12 @@ const PRODUCT_CATEGORIES = {
   GRP2624: 'IP Phone',
   GRP2634P: 'IP Phone',
 
+
+  /* =========================
+     Polycom IP PHONES
+     ========================= */
+  VVX400: 'IP Phone',
+  VVX410: 'IP Phone',
 
 
   /* =========================
@@ -4895,8 +4905,16 @@ const PRODUCT_CATEGORIES = {
   UCM6304: 'IP PBX',
   UCM6304A: 'IP PBX',
   UCM6308: 'IP PBX',
-  UCM6308A: 'IP PBX'
+  UCM6308A: 'IP PBX',
+
+  /* =========================
+     Attendance Machines
+     ========================= */
+
+     ZKTecoK40: 'Attendance Machine'
 }
+
+
 
 /* ============================================================
    PRODUCT IMAGES MAPPING
@@ -5141,7 +5159,16 @@ const PRODUCT_IMAGES = {
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS8HfUlIFaUdm5vO_GMg4lK0sskQH1C546nYOSemA46AQ&s=10',
 
   UCM6308A:
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS8HfUlIFaUdm5vO_GMg4lK0sskQH1C546nYOSemA46AQ&s=10'
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS8HfUlIFaUdm5vO_GMg4lK0sskQH1C546nYOSemA46AQ&s=10',
+
+  ZKTecoK40:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTa1_PrQFpqmmc4GTpAOrsOMoJfbnAYa2PfMo8tkg6_1g&s=10',
+    
+  VVX400:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRmYZNp4Rh5sOXGn1bpi1Ogib8JA0sFdDFbW4Bn2AVRhw&s=10',
+    
+  VVX410:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRNiIDieUUy8FFSjiVVqlVwyfdZchxf50gEvi1UP56iPw&s=10'   
 }
 
 /* ============================================================
@@ -5197,6 +5224,16 @@ export default function Inventory() {
   const [macError, setMacError] = useState('')
   const [returning, setReturning] = useState(false)
   const [showDemoDetails, setShowDemoDetails] = useState(null)
+  
+  // Edit states
+  const [editingItem, setEditingItem] = useState(null)
+  const [editForm, setEditForm] = useState(emptyForm)
+  const [editProductSearch, setEditProductSearch] = useState('')
+  const [editShowDropdown, setEditShowDropdown] = useState(false)
+  const [editIsCustomSelected, setIsEditCustomSelected] = useState(false)
+  const [editMacError, setEditMacError] = useState('')
+  const [editSaving, setEditSaving] = useState(false)
+  const [isSoldItemEdit, setIsSoldItemEdit] = useState(false)
 
   /* ============================================================
      SEARCHABLE DROPDOWN
@@ -5208,6 +5245,8 @@ export default function Inventory() {
 
   const dropdownRef = useRef(null)
   const inputRef = useRef(null)
+  const editInputRef = useRef(null)
+  const editDropdownRef = useRef(null)
 
   /* ============================================================
      OWNER
@@ -5230,6 +5269,22 @@ export default function Inventory() {
       p.toLowerCase().includes(q)
     )
   }, [productSearch])
+
+  /* ============================================================
+     EDIT FILTER PRODUCTS
+     ============================================================ */
+
+  const editFilteredProducts = useMemo(() => {
+    if (!editProductSearch.trim()) {
+      return PRODUCT_NAMES
+    }
+
+    const q = editProductSearch.toLowerCase().trim()
+
+    return PRODUCT_NAMES.filter((p) =>
+      p.toLowerCase().includes(q)
+    )
+  }, [editProductSearch])
 
   /* ============================================================
      CLOSE DROPDOWN
@@ -5258,9 +5313,31 @@ export default function Inventory() {
     }
   }, [])
 
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        editDropdownRef.current &&
+        !editDropdownRef.current.contains(event.target)
+      ) {
+        setEditShowDropdown(false)
+      }
+    }
+
+    document.addEventListener(
+      'mousedown',
+      handleClickOutside
+    )
+
+    return () => {
+      document.removeEventListener(
+        'mousedown',
+        handleClickOutside
+      )
+    }
+  }, [])
+
   /* ============================================================
-     LOAD STOCK
-     ============================================================ */
+     LOAD STOCK     ============================================================ */
 
   useEffect(() => {
     if (!companyId) return
@@ -5496,7 +5573,7 @@ export default function Inventory() {
      CHECK MAC EXISTS
      ============================================================ */
 
-  const checkMacExists = async (mac) => {
+  const checkMacExists = async (mac, excludeId = null) => {
     if (!mac || !companyId) {
       return false
     }
@@ -5522,6 +5599,11 @@ export default function Inventory() {
       const stockData = snapshot.val()
 
       for (const key in stockData) {
+        // Skip the item being edited
+        if (excludeId && key === excludeId) {
+          continue
+        }
+
         const item = stockData[key]
 
         if (
@@ -5569,6 +5651,34 @@ export default function Inventory() {
       }
     } else {
       setMacError('')
+    }
+  }
+
+  /* ============================================================
+     EDIT MAC CHANGE
+     ============================================================ */
+
+  const handleEditMacChange = async (e) => {
+    const value = e.target.value
+
+    setEditForm({
+      ...editForm,
+      mac: value
+    })
+
+    if (value.trim()) {
+      const exists =
+        await checkMacExists(value, editingItem?.id)
+
+      if (exists) {
+        setEditMacError(
+          '⚠️ This MAC address is already added in inventory'
+        )
+      } else {
+        setEditMacError('')
+      }
+    } else {
+      setEditMacError('')
     }
   }
 
@@ -5846,6 +5956,154 @@ export default function Inventory() {
   }
 
   /* ============================================================
+     EDIT SUBMIT
+     ============================================================ */
+
+  async function handleEditSubmit(e) {
+    e.preventDefault()
+
+    if (!editingItem) return
+
+    // If it's a sold item, only update description
+    if (isSoldItemEdit) {
+      setEditSaving(true)
+      try {
+        const stockRef = ref(
+          db,
+          `companies/${companyId}/stock/${editingItem.id}`
+        )
+
+        await update(stockRef, {
+          description: editForm.description.trim() || null,
+          updatedAt: Date.now()
+        })
+
+        setEditingItem(null)
+        setEditForm(emptyForm)
+        setEditProductSearch('')
+        setEditShowDropdown(false)
+        setIsEditCustomSelected(false)
+        setEditMacError('')
+        setIsSoldItemEdit(false)
+
+      } catch (error) {
+        console.error(
+          'Error updating sold item description:',
+          error
+        )
+        alert('Failed to update description')
+      } finally {
+        setEditSaving(false)
+      }
+      return
+    }
+
+    let finalProductName = ''
+
+    if (
+      editForm.productName &&
+      editForm.productName !== 'Custom'
+    ) {
+      finalProductName =
+        editForm.productName
+    } else if (
+      editForm.customProductName.trim()
+    ) {
+      finalProductName =
+        editForm.customProductName.trim()
+    }
+
+    const category =
+      editForm.category === 'Custom'
+        ? editForm.customCategory.trim()
+        : editForm.category
+
+    if (
+      !category ||
+      !finalProductName
+    ) {
+      alert(
+        'Please select a product name and category'
+      )
+
+      return
+    }
+
+    if (!editForm.addedDate) {
+      alert(
+        'Please select Date of Entry'
+      )
+
+      return
+    }
+
+    /* MAC CHECK - exclude current item */
+    if (editForm.mac) {
+      const exists =
+        await checkMacExists(editForm.mac, editingItem.id)
+
+      if (exists) {
+        setEditMacError(
+          '⚠️ This MAC address is already added in inventory'
+        )
+
+        return
+      }
+    }
+
+    setEditSaving(true)
+
+    try {
+      const stockRef = ref(
+        db,
+        `companies/${companyId}/stock/${editingItem.id}`
+      )
+
+      const mac = normalizeMac(
+        editForm.mac
+      )
+
+      const qty = mac
+        ? 1
+        : Math.max(
+            1,
+            Number(editForm.quantity) || 1
+          )
+
+      await update(stockRef, {
+        category,
+        name: finalProductName,
+        mac: mac || null,
+        serial: editForm.serial.trim() || null,
+        description: editForm.description.trim() || null,
+        quantity: qty,
+        addedDate: editForm.addedDate,
+        updatedAt: Date.now()
+      })
+
+      setEditingItem(null)
+      setEditForm(emptyForm)
+      setEditProductSearch('')
+      setEditShowDropdown(false)
+      setIsEditCustomSelected(false)
+      setEditMacError('')
+      setIsSoldItemEdit(false)
+
+    } catch (error) {
+      console.error(
+        'Error updating stock:',
+        error
+      )
+
+      alert(
+        'Failed to update product'
+      )
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  /* ============================================================
      DELETE
      ============================================================ */
 
@@ -5921,6 +6179,45 @@ export default function Inventory() {
   }
 
   /* ============================================================
+     EDIT SELECT PRODUCT
+     ============================================================ */
+
+  function editSelectProduct(name) {
+
+    const automaticCategory =
+      PRODUCT_CATEGORIES[name]
+
+    const categoryExists =
+      automaticCategory &&
+      CATEGORIES.includes(
+        automaticCategory
+      )
+
+    setEditForm({
+      ...editForm,
+
+      productName: name,
+
+      customProductName: '',
+
+      category:
+        categoryExists
+          ? automaticCategory
+          : editForm.category,
+
+      customCategory: ''
+    })
+
+    setEditProductSearch(name)
+    setIsEditCustomSelected(false)
+    setEditShowDropdown(false)
+
+    if (editInputRef.current) {
+      editInputRef.current.blur()
+    }
+  }
+
+  /* ============================================================
      SELECT CUSTOM PRODUCT
      ============================================================ */
 
@@ -5947,6 +6244,32 @@ export default function Inventory() {
   }
 
   /* ============================================================
+     EDIT SELECT CUSTOM PRODUCT
+     ============================================================ */
+
+  function editSelectCustomProduct(
+    searchTerm
+  ) {
+    const customName =
+      searchTerm.trim() || 'Custom'
+
+    setEditForm({
+      ...editForm,
+      productName: 'Custom',
+      customProductName:
+        customName
+    })
+
+    setEditProductSearch(customName)
+    setIsEditCustomSelected(true)
+    setEditShowDropdown(false)
+
+    if (editInputRef.current) {
+      editInputRef.current.blur()
+    }
+  }
+
+  /* ============================================================
      CLEAR PRODUCT
      ============================================================ */
 
@@ -5963,6 +6286,26 @@ export default function Inventory() {
 
     if (inputRef.current) {
       inputRef.current.focus()
+    }
+  }
+
+  /* ============================================================
+     EDIT CLEAR PRODUCT
+     ============================================================ */
+
+  function editClearProduct() {
+    setEditForm({
+      ...editForm,
+      productName: '',
+      customProductName: ''
+    })
+
+    setEditProductSearch('')
+    setIsEditCustomSelected(false)
+    setEditShowDropdown(false)
+
+    if (editInputRef.current) {
+      editInputRef.current.focus()
     }
   }
 
@@ -5997,6 +6340,79 @@ export default function Inventory() {
     }
 
     setShowDropdown(true)
+  }
+
+  /* ============================================================
+     EDIT PRODUCT INPUT CHANGE
+     ============================================================ */
+
+  function handleEditInputChange(e) {
+    const value = e.target.value
+
+    setEditProductSearch(value)
+
+    if (editIsCustomSelected) {
+      setIsEditCustomSelected(false)
+
+      setEditForm({
+        ...editForm,
+        productName: '',
+        customProductName: ''
+      })
+    }
+
+    if (
+      editForm.productName &&
+      editForm.productName !== 'Custom'
+    ) {
+      setEditForm({
+        ...editForm,
+        productName: '',
+        customProductName: ''
+      })
+    }
+
+    setEditShowDropdown(true)
+  }
+
+  /* ============================================================
+     OPEN EDIT MODAL
+     ============================================================ */
+
+  function openEditModal(item) {
+    if (!isOwner) return
+    
+    const isSold = item.status === 'sold'
+    const isDemo = item.status === 'demo'
+    
+    // For demo items, don't allow edit
+    if (isDemo) {
+      alert('Cannot edit demo items')
+      return
+    }
+
+    setIsSoldItemEdit(isSold)
+
+    setEditingItem(item)
+    
+    const productName = item.name || ''
+    const isCustomProduct = !PRODUCT_NAMES.includes(productName)
+
+    setEditForm({
+      category: item.category || CATEGORIES[0],
+      customCategory: '',
+      productName: isCustomProduct ? 'Custom' : productName,
+      customProductName: isCustomProduct ? productName : '',
+      mac: item.mac || '',
+      serial: item.serial || '',
+      description: item.description || '',
+      quantity: item.quantity || 1,
+      addedDate: item.addedDate || getTodayDate()
+    })
+
+    setEditProductSearch(productName)
+    setIsEditCustomSelected(isCustomProduct)
+    setEditMacError('')
   }
 
   /* ============================================================
@@ -6311,6 +6727,12 @@ export default function Inventory() {
                   const isDemo =
                     s.status === 'demo'
 
+                  const isSold =
+                    s.status === 'sold'
+
+                  const canFullEdit = isOwner && !isDemo && !isSold
+                  const canEditDescription = isOwner && isSold
+
                   return (
                     <tr
                       key={s.id}
@@ -6428,10 +6850,44 @@ export default function Inventory() {
 
                         <div className="flex items-center gap-2 justify-center">
 
-                          {/* DELETE */}
+                          {/* EDIT - Full edit for non-sold/non-demo items */}
+
+                          {canFullEdit && (
+                            <button
+                              onClick={() =>
+                                openEditModal(s)
+                              }
+                              className="text-slateink hover:text-teal-dark"
+                              aria-label="Edit stock"
+                              title="Edit item"
+                            >
+                              <Pencil
+                                size={15}
+                              />
+                            </button>
+                          )}
+
+                          {/* EDIT - Only description for sold items */}
+
+                          {canEditDescription && (
+                            <button
+                              onClick={() =>
+                                openEditModal(s)
+                              }
+                              className="text-slateink hover:text-teal-dark"
+                              aria-label="Edit description"
+                              title="Edit description only"
+                            >
+                              <Pencil
+                                size={15}
+                              />
+                            </button>
+                          )}
+
+                          {/* DELETE - Only for owner and not demo */}
 
                           {isOwner &&
-                            s.status !== 'demo' && (
+                            !isDemo && (
                               <button
                                 onClick={() =>
                                   handleDelete(
@@ -6654,6 +7110,590 @@ export default function Inventory() {
             </button>
 
           </div>
+
+        </Modal>
+
+      )}
+
+      {/* ============================================================
+          EDIT STOCK MODAL
+          ============================================================ */}
+
+      {editingItem && isOwner && (
+
+        <Modal
+          title={isSoldItemEdit ? `Edit Description - ${editingItem.name}` : `Edit Stock - ${editingItem.name}`}
+          onClose={() => {
+            setEditingItem(null)
+            setEditForm(emptyForm)
+            setEditProductSearch('')
+            setEditShowDropdown(false)
+            setIsEditCustomSelected(false)
+            setEditMacError('')
+            setIsSoldItemEdit(false)
+          }}
+        >
+
+          <form
+            onSubmit={handleEditSubmit}
+            className="space-y-4"
+          >
+
+            {/* For sold items, only show description field */}
+            {isSoldItemEdit ? (
+
+              <>
+                {/* DESCRIPTION ONLY */}
+
+                <div className="bg-amber-light/30 border border-amber/30 rounded-lg p-3 mb-2">
+                  <p className="text-sm text-amber-dark">
+                    <strong>Note:</strong> This item is <strong>Sold</strong>. Only the description can be edited.
+                  </p>
+                </div>
+
+                <label className="block">
+
+                  <span className="text-xs font-medium text-slateink">
+                    Description
+                  </span>
+
+                  <textarea
+                    value={
+                      editForm.description
+                    }
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        description:
+                          e.target.value
+                      })
+                    }
+                    className="input min-h-[100px] mt-1"
+                    placeholder="Update description for this sold item…"
+                  />
+
+                </label>
+
+              </>
+
+            ) : (
+
+              // Full edit for non-sold items
+              <>
+
+                {/* ==================================================
+                    CATEGORY
+                    ================================================== */}
+
+                <label className="block">
+
+                  <span className="text-xs font-medium text-slateink">
+                    Category *
+                  </span>
+
+                  <select
+                    value={editForm.category}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        category:
+                          e.target.value
+                      })
+                    }
+                    className="input mt-1"
+                  >
+
+                    {CATEGORIES.map(
+                      (c) => (
+
+                        <option
+                          key={c}
+                          value={c}
+                        >
+                          {c}
+                        </option>
+
+                      )
+                    )}
+
+                    <option value="Custom">
+                      Custom…
+                    </option>
+
+                  </select>
+
+                </label>
+
+                {/* ==================================================
+                    CUSTOM CATEGORY
+                    ================================================== */}
+
+                {editForm.category ===
+                  'Custom' && (
+
+                  <label className="block">
+
+                    <span className="text-xs font-medium text-slateink">
+                      Custom Category Name *
+                    </span>
+
+                    <input
+                      required
+                      value={
+                        editForm.customCategory
+                      }
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          customCategory:
+                            e.target.value
+                        })
+                      }
+                      className="input mt-1"
+                      placeholder="e.g. Router"
+                    />
+
+                  </label>
+
+                )}
+
+                {/* ==================================================
+                    PRODUCT NAME
+                    ================================================== */}
+
+                <label className="block">
+
+                  <span className="text-xs font-medium text-slateink">
+                    Product Name *
+                  </span>
+
+                  <div
+                    className="relative mt-1"
+                    ref={editDropdownRef}
+                  >
+
+                    <div className="relative">
+
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        value={editProductSearch}
+                        onChange={
+                          handleEditInputChange
+                        }
+                        onFocus={() => {
+                          if (
+                            !editForm.productName &&
+                            !editIsCustomSelected
+                          ) {
+                            setEditShowDropdown(
+                              true
+                            )
+                          }
+                        }}
+                        placeholder="Search or type product name…"
+                        className="input w-full pr-10"
+                      />
+
+                      {editProductSearch && (
+
+                        <button
+                          type="button"
+                          onClick={
+                            editClearProduct
+                          }
+                          className="absolute right-9 top-1/2 -translate-y-1/2 text-slateink hover:text-coral"
+                        >
+                          <X size={14} />
+                        </button>
+
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+
+                          if (
+                            editForm.productName ||
+                            editIsCustomSelected
+                          ) {
+
+                            setEditForm({
+                              ...editForm,
+                              productName: '',
+                              customProductName: ''
+                            })
+
+                            setEditProductSearch(
+                              ''
+                            )
+
+                            setIsEditCustomSelected(
+                              false
+                            )
+
+                            setEditShowDropdown(
+                              true
+                            )
+
+                            if (
+                              editInputRef.current
+                            ) {
+                              editInputRef.current.focus()
+                            }
+
+                            return
+                          }
+
+                          setEditShowDropdown(
+                            !editShowDropdown
+                          )
+                        }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slateink hover:text-ink"
+                      >
+                        <ChevronDown
+                          size={16}
+                        />
+                      </button>
+
+                    </div>
+
+                    {/* AUTOMATIC CATEGORY INFO */}
+
+                    {editForm.productName &&
+                      editForm.productName !==
+                        'Custom' &&
+                      PRODUCT_CATEGORIES[
+                        editForm.productName
+                      ] && (
+
+                      <p className="text-xs text-teal-dark mt-1">
+                        Category automatically set to:{' '}
+                        <strong>
+                          {
+                            PRODUCT_CATEGORIES[
+                              editForm.productName
+                            ]
+                          }
+                        </strong>
+                      </p>
+
+                    )}
+
+                    {editForm.productName &&
+                      editForm.productName !==
+                        'Custom' && (
+
+                        <p className="text-xs text-teal-dark mt-1">
+
+                          Selected:{' '}
+
+                          <strong>
+                            {
+                              editForm.productName
+                            }
+                          </strong>
+
+                        </p>
+
+                      )}
+
+                    {editForm.productName ===
+                      'Custom' &&
+                      editForm.customProductName && (
+
+                      <p className="text-xs text-teal-dark mt-1">
+
+                        Custom product:{' '}
+
+                        <strong>
+                          {
+                            editForm.customProductName
+                          }
+                        </strong>
+
+                      </p>
+
+                    )}
+
+                    {editShowDropdown &&
+                      !editIsCustomSelected && (
+
+                      <div className="absolute z-50 w-full mt-1 bg-white border border-line rounded-lg shadow-lg max-h-60 overflow-y-auto">
+
+                        {editFilteredProducts.length >
+                        0 ? (
+
+                          <>
+
+                            {editFilteredProducts.map(
+                              (p) => (
+
+                                <div
+                                  key={p}
+                                  onMouseDown={(e) => {
+                                    e.preventDefault()
+                                  }}
+                                  onClick={() =>
+                                    editSelectProduct(
+                                      p
+                                    )
+                                  }
+                                  className="px-4 py-2.5 hover:bg-teal-light cursor-pointer text-sm text-ink transition-colors"
+                                >
+                                  {p}
+
+                                  {PRODUCT_CATEGORIES[
+                                    p
+                                  ] && (
+                                    <span className="ml-2 text-xs text-slateink">
+                                      (
+                                      {
+                                        PRODUCT_CATEGORIES[
+                                          p
+                                        ]
+                                      }
+                                      )
+                                    </span>
+                                  )}
+                                </div>
+
+                              )
+                            )}
+
+                            {!PRODUCT_NAMES.includes(
+                              editProductSearch.trim()
+                            ) &&
+                              editProductSearch.trim() &&
+                              !editIsCustomSelected && (
+
+                                <div
+                                  onMouseDown={(
+                                    e
+                                  ) => {
+                                    e.preventDefault()
+                                  }}
+                                  onClick={() =>
+                                    editSelectCustomProduct(
+                                      editProductSearch
+                                    )
+                                  }
+                                  className="px-4 py-2.5 hover:bg-teal-light cursor-pointer text-sm text-teal-dark border-t border-line font-medium"
+                                >
+                                  + Add "
+                                  {
+                                    editProductSearch.trim()
+                                  }
+                                  " as new product
+                                </div>
+
+                              )}
+
+                          </>
+
+                        ) : (
+
+                          !editIsCustomSelected && (
+
+                            <div
+                              onMouseDown={(
+                                e
+                              ) => {
+                                e.preventDefault()
+                              }}
+                              onClick={() =>
+                                editSelectCustomProduct(
+                                  editProductSearch
+                                )
+                              }
+                              className="px-4 py-3 hover:bg-teal-light cursor-pointer text-sm text-teal-dark"
+                            >
+                              + Add "
+                              {
+                                editProductSearch.trim() ||
+                                'Custom'
+                              }
+                              " as new product
+                            </div>
+
+                          )
+
+                        )}
+
+                      </div>
+
+                    )}
+
+                  </div>
+
+                </label>
+
+                {/* ==================================================
+                    DATE OF ENTRY
+                    ================================================== */}
+
+                <label className="block">
+
+                  <span className="text-xs font-medium text-slateink">
+                    Date of Entry *
+                  </span>
+
+                  <input
+                    type="date"
+                    required
+                    value={editForm.addedDate}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        addedDate:
+                          e.target.value
+                      })
+                    }
+                    className="input mt-1"
+                  />
+
+                </label>
+
+                {/* ==================================================
+                    MAC ADDRESS
+                    ================================================== */}
+
+                <label className="block">
+
+                  <span className="text-xs font-medium text-slateink">
+                    MAC Address (optional)
+                  </span>
+
+                  <input
+                    value={editForm.mac}
+                    onChange={
+                      handleEditMacChange
+                    }
+                    className={`input mt-1 font-mono ${
+                      editMacError
+                        ? 'border-coral focus:border-coral'
+                        : ''
+                    }`}
+                    placeholder="AA:BB:CC:DD:EE:FF"
+                  />
+
+                  {editMacError && (
+
+                    <p className="text-xs text-coral font-medium mt-1">
+                      {editMacError}
+                    </p>
+
+                  )}
+
+                </label>
+
+                {/* ==================================================
+                    SERIAL NUMBER
+                    ================================================== */}
+
+                <label className="block">
+
+                  <span className="text-xs font-medium text-slateink">
+                    Serial Number (optional)
+                  </span>
+
+                  <input
+                    value={editForm.serial}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        serial:
+                          e.target.value
+                      })
+                    }
+                    className="input mt-1 font-mono"
+                    placeholder="SN-000123"
+                  />
+
+                </label>
+
+                {/* ==================================================
+                    QUANTITY
+                    ================================================== */}
+
+                {!editForm.mac && (
+
+                  <label className="block">
+
+                    <span className="text-xs font-medium text-slateink">
+                      Quantity
+                    </span>
+
+                    <input
+                      type="number"
+                      min={1}
+                      value={
+                        editForm.quantity
+                      }
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          quantity:
+                            e.target.value
+                        })
+                      }
+                      className="input mt-1"
+                    />
+
+                  </label>
+
+                )}
+
+                {/* ==================================================
+                    DESCRIPTION
+                    ================================================== */}
+
+                <label className="block">
+
+                  <span className="text-xs font-medium text-slateink">
+                    Description (optional)
+                  </span>
+
+                  <textarea
+                    value={
+                      editForm.description
+                    }
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        description:
+                          e.target.value
+                      })
+                    }
+                    className="input min-h-[70px] mt-1"
+                    placeholder="Notes about this product…"
+                  />
+
+                </label>
+
+              </>
+
+            )}
+
+            {/* ==================================================
+                SUBMIT
+                ================================================== */}
+
+            <button
+              type="submit"
+              disabled={
+                editSaving || (!!editMacError && !isSoldItemEdit)
+              }
+              className="w-full rounded-lg bg-teal text-white text-sm font-medium py-2.5 hover:bg-teal-dark transition-colors disabled:opacity-60"
+            >
+              {editSaving
+                ? 'Updating…'
+                : isSoldItemEdit
+                ? 'Update Description'
+                : 'Update Stock'}
+            </button>
+
+          </form>
 
         </Modal>
 
