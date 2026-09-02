@@ -12252,7 +12252,6 @@
 
 
 
-
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { ref, push, onValue, update, get, set } from 'firebase/database'
 import {
@@ -12261,7 +12260,9 @@ import {
   FileText,
   Printer,
   Pencil,
-  Download
+  Download,
+  Search,
+  X
 } from 'lucide-react'
 
 import { db } from '../firebase'
@@ -12487,6 +12488,12 @@ export default function DeliveryChallan() {
   const [dcNumberError, setDcNumberError] = useState('')
 
   /* ============================================================
+     SEARCH STATE
+     ============================================================ */
+
+  const [searchTerm, setSearchTerm] = useState('')
+
+  /* ============================================================
      LOAD DATA
      ============================================================ */
 
@@ -12620,6 +12627,56 @@ export default function DeliveryChallan() {
     customerId,
     editingChallan
   ])
+
+  /* ============================================================
+     FILTERED CHALLANS FOR SEARCH
+     ============================================================ */
+
+  const filteredChallans = useMemo(() => {
+    if (!challans) return []
+
+    const search = searchTerm.trim().toLowerCase()
+
+    if (!search) {
+      return challans
+    }
+
+    return challans.filter((challan) => {
+      // Search by DC number
+      if (
+        challan.dcNumber &&
+        challan.dcNumber.toLowerCase().includes(search)
+      ) {
+        return true
+      }
+
+      // Search by customer name
+      if (
+        challan.customerName &&
+        challan.customerName.toLowerCase().includes(search)
+      ) {
+        return true
+      }
+
+      // Search by customer company
+      if (
+        challan.customerCompany &&
+        challan.customerCompany.toLowerCase().includes(search)
+      ) {
+        return true
+      }
+
+      // Search by date (formatted)
+      if (
+        challan.date &&
+        formatDate(challan.date).toLowerCase().includes(search)
+      ) {
+        return true
+      }
+
+      return false
+    })
+  }, [challans, searchTerm])
 
   /* ============================================================
      VALIDATE DC NUMBER ON CHANGE
@@ -14129,11 +14186,47 @@ export default function DeliveryChallan() {
 
       </div>
 
+      {/* ======================================================
+          SEARCH BAR
+          ====================================================== */}
+
+      <div className="mb-6">
+
+        <div className="relative max-w-md">
+
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) =>
+              setSearchTerm(e.target.value)
+            }
+            className="input w-full pl-9 pr-4"
+            placeholder="Search by DC #, customer, company, date..."
+          />
+
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slateink hover:text-ink"
+            >
+              <X size={14} />
+            </button>
+          )}
+
+        </div>
+
+        <p className="text-xs text-slateink mt-1">
+          Search by DC number, customer name, company name, or date
+        </p>
+
+      </div>
+
       {/* CHALLAN LIST */}
 
       {challans === null ? (
         <Loader />
-      ) : challans.length === 0 ? (
+      ) : filteredChallans.length === 0 ? (
         <div className="border border-dashed border-line rounded-2xl py-16 flex flex-col items-center justify-center text-center">
 
           <FileText
@@ -14142,8 +14235,16 @@ export default function DeliveryChallan() {
           />
 
           <p className="font-medium text-ink">
-            Abhi tak koi DC nahi banaya
+            {searchTerm
+              ? 'No matching delivery challans found'
+              : 'Abhi tak koi DC nahi banaya'}
           </p>
+
+          {searchTerm && (
+            <p className="text-sm text-slateink mt-1">
+              Try searching with different keywords
+            </p>
+          )}
 
         </div>
       ) : (
@@ -14183,7 +14284,7 @@ export default function DeliveryChallan() {
 
               <tbody>
 
-                {challans.map(
+                {filteredChallans.map(
                   (c) => (
 
                     <tr

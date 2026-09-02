@@ -27870,10 +27870,6 @@ export default function DemoDeliveryChallan() {
               placeholder="Search by MAC address, last 4 digits, DDC number, customer..."
             />
 
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slateink"
-            />
 
             {searchTerm && (
               <button
