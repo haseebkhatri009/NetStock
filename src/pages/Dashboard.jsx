@@ -2341,7 +2341,6 @@
 
 
 
-
 import { useEffect, useMemo, useState } from 'react'
 import { ref, onValue } from 'firebase/database'
 
@@ -4364,7 +4363,7 @@ export default function Dashboard() {
 
 
                     {/* =================================================
-                        INVOICE LIST
+                        INVOICE LIST - FIXED VERSION
                         ================================================= */}
 
                     {monthlyReport.invoices.length === 0 ? (
@@ -4412,18 +4411,16 @@ export default function Dashboard() {
                               index
                             ) => {
 
-                              /*
-                               * IMPORTANT:
-                               *
-                               * Individual invoice amount
-                               * is also AFTER DISCOUNT.
-                               */
-
                               const amount =
                                 getInvoiceFinalAmount(
                                   invoice
                                 )
 
+                              // FIX: Priority - Company name pehle, agar nahi toh Customer name
+                              const displayName = 
+                                invoice.customerCompany?.trim() || 
+                                invoice.customerName?.trim() || 
+                                'Unknown Customer'
 
                               return (
 
@@ -4448,8 +4445,7 @@ export default function Dashboard() {
 
                                     <p className="text-xs text-slateink mt-0.5">
 
-                                      {invoice.customerName ||
-                                        'Unknown Customer'}
+                                      {displayName}
 
                                     </p>
 

@@ -6711,7 +6711,8 @@ async function incrementInvoiceCounter(companyId) {
 const emptyItem = {
   name: '',
   qty: 1,
-  price: ''
+  price: '',
+  unit: 'PCS'  // Added unit field with default
 }
 
 
@@ -6830,7 +6831,8 @@ export default function Invoice() {
     useState({
       name: '',
       qty: 1,
-      price: 0
+      price: 0,
+      unit: 'PCS'
     })
 
 
@@ -7181,7 +7183,10 @@ export default function Invoice() {
         Math.max(
           0,
           Number(pick.price) || 0
-        )
+        ),
+
+      unit:
+        pick.unit || 'PCS'
 
     }
 
@@ -7246,7 +7251,10 @@ export default function Invoice() {
         item.qty,
 
       price:
-        item.price
+        item.price,
+
+      unit:
+        item.unit || 'PCS'
 
     })
 
@@ -7302,7 +7310,10 @@ export default function Invoice() {
           Number(
             editProduct.price
           ) || 0
-        )
+        ),
+
+      unit:
+        editProduct.unit || 'PCS'
 
     }
 
@@ -7321,7 +7332,8 @@ export default function Invoice() {
 
       name: '',
       qty: 1,
-      price: 0
+      price: 0,
+      unit: 'PCS'
 
     })
 
@@ -7342,7 +7354,8 @@ export default function Invoice() {
 
       name: '',
       qty: 1,
-      price: 0
+      price: 0,
+      unit: 'PCS'
 
     })
 
@@ -7393,7 +7406,8 @@ export default function Invoice() {
 
       name: '',
       qty: 1,
-      price: 0
+      price: 0,
+      unit: 'PCS'
 
     })
 
@@ -7565,7 +7579,10 @@ export default function Invoice() {
               price:
                 Number(
                   item.price
-                ) || 0
+                ) || 0,
+
+              unit:
+                item.unit || 'PCS'
 
             })
           )
@@ -8666,6 +8683,19 @@ export default function Invoice() {
                     placeholder="Product name / model"
                   />
 
+                  <input
+                    type="text"
+                    value={pick.unit}
+                    onChange={(e) =>
+                      setPick({
+                        ...pick,
+                        unit:
+                          e.target.value
+                      })
+                    }
+                    className="input sm:w-20"
+                    placeholder="Unit"
+                  />
 
                   <input
                     type="number"
@@ -8740,7 +8770,7 @@ export default function Invoice() {
                             </span>
 
                             <span className="text-xs text-slateink ml-2">
-                              x{item.qty}
+                              {item.unit || 'PCS'} x{item.qty}
                             </span>
 
                             <span className="text-xs text-slateink ml-2">
@@ -9212,6 +9242,28 @@ export default function Invoice() {
 
               </div>
 
+              <div>
+
+                <label className="text-xs font-medium text-slateink">
+                  Unit
+                </label>
+
+                <input
+                  type="text"
+                  value={editProduct.unit}
+                  onChange={(e) =>
+                    setEditProduct({
+                      ...editProduct,
+                      unit:
+                        e.target.value
+                    })
+                  }
+                  className="input mt-1 w-full"
+                  placeholder="PCS, KG, MTR, etc."
+                />
+
+              </div>
+
 
               <div className="grid grid-cols-2 gap-3">
 
@@ -9457,6 +9509,12 @@ function InvoicePreview({
         )
 
 
+  // Check if customer has a name, otherwise use company as bold
+  const customerDisplayName = invoice.customer?.name?.trim() || invoice.customer?.company?.trim() || ''
+  const customerCompany = invoice.customer?.company?.trim() || ''
+  const showCompanySeparately = invoice.customer?.name?.trim() && invoice.customer?.company?.trim()
+
+
   return (
 
     <div className="invoice-preview-overlay fixed inset-0 z-[9999] bg-black/60 overflow-y-auto p-4 sm:p-8">
@@ -9687,19 +9745,16 @@ function InvoicePreview({
 
             <div className="invoice-buyer-content">
 
-              <div className="invoice-buyer-name">
-
-                {invoice.customer?.name || ''}
-
-              </div>
-
-
-              {invoice.customer?.company && (
-
-                <div>
-                  {invoice.customer.company}
+              {customerDisplayName && (
+                <div className="invoice-buyer-name">
+                  {customerDisplayName}
                 </div>
+              )}
 
+              {showCompanySeparately && customerCompany && (
+                <div>
+                  {customerCompany}
+                </div>
               )}
 
 
@@ -9733,7 +9788,7 @@ function InvoicePreview({
 
             <colgroup>
 
-              <col className="qty-col" />
+              <col className="qty-col " />
 
               <col className="unit-col" />
 
@@ -9758,7 +9813,7 @@ function InvoicePreview({
                   Unit
                 </th>
 
-                <th>
+                <th >
                   Description Of Goods
                 </th>
 
@@ -9806,7 +9861,7 @@ function InvoicePreview({
                       </td>
 
                       <td>
-                        PCS
+                        {item.unit || 'PCS'}
                       </td>
 
                       <td className="description-cell">
@@ -10378,7 +10433,7 @@ const invoicePrintStyles = `
 
   font-weight: 700;
 
-  text-align: left;
+  text-align: center;
 
   border-left: 1px solid #222;
 
@@ -10390,6 +10445,10 @@ const invoicePrintStyles = `
 
 }
 
+
+.invoice-table tbody td:nth-child(2) {
+  text-align: center;
+}
 
 .invoice-table tbody td {
 
@@ -10410,8 +10469,6 @@ const invoicePrintStyles = `
   background: transparent !important;
 
 }
-
-
 
 
 .invoice-table .quantity-cell {
