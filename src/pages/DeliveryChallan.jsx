@@ -12251,7 +12251,6 @@
 // }
 
 
-
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { ref, push, onValue, update, get, set } from 'firebase/database'
 import {
@@ -15766,6 +15765,11 @@ ${content}
     doc.customer?.phone ||
     ''
 
+  // FIX: Determine what to show in "Delivery To" section
+  // Priority: Company > Name > Nothing
+  const deliveryToName = customerCompany || customerName || ''
+  const showCompanyAsName = !customerCompany && customerName
+
   return (
     <Modal
       title={`${type} — ${
@@ -15977,7 +15981,7 @@ ${content}
 
               </div>
 
-              {/* DELIVERY TO */}
+              {/* DELIVERY TO - FIXED VERSION */}
 
               <div
                 className="dc-delivery-to"
@@ -16001,25 +16005,36 @@ ${content}
 
                 </div>
 
-                <div
-                  className="dc-delivery-to-name"
-                  style={{
-                    fontWeight: 600
-                  }}
-                >
+                {/* Show company name first, if not then show customer name */}
+                {customerCompany && (
+                  <div
+                    className="dc-delivery-to-name"
+                    style={{
+                      fontWeight: 600
+                    }}
+                  >
+                    M/S. {customerCompany}
+                  </div>
+                )}
 
-                  {customerCompany
-                    ? `M/S. ${customerCompany}`
-                    : `M/S. ${customerName}`}
+                {/* If no company, show customer name as bold */}
+                {!customerCompany && customerName && (
+                  <div
+                    className="dc-delivery-to-name"
+                    style={{
+                      fontWeight: 600
+                    }}
+                  >
+                    {customerName}
+                  </div>
+                )}
 
-                </div>
-
-                {!customerCompany &&
-                  customerName && (
-                    <div>
-                      {customerName}
-                    </div>
-                  )}
+                {/* If company exists, show customer name below (if different) */}
+                {customerCompany && customerName && customerName !== customerCompany && (
+                  <div style={{ marginTop: '0.5mm' }}>
+                    {customerName}
+                  </div>
+                )}
 
                 {customerAddress && (
                   <div
