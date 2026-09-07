@@ -1562,10 +1562,7 @@ export default function Customers() {
                 ================================================== */}
 
             <p className="text-xs text-slateink bg-paper rounded-lg px-3 py-2">
-
-              Customer Name ya Customer Company
-              mein se <strong>kam az kam aik</strong> enter karna
-              zaroori hai.
+                At least one of Customer Name or Customer Company is required.
 
             </p>
 

@@ -117,12 +117,12 @@ export default function Login() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slateink">
+          {/* <p className="mt-6 text-center text-sm text-slateink">
             Don't have a company account?{' '}
             <Link to="/signup" className="text-teal-dark font-medium">
               Sign up
             </Link>
-          </p>
+          </p> */}
         </div>
       </div>
     </div>
