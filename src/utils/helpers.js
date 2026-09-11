@@ -1,4 +1,4 @@
-export const CATEGORIES = ['IP Phone', 'Camera', 'Access Point','Switch', 'DECT', 'WiFi Phone', 'ATA', 'IP PBX', 'Video Conferencing', 'Intercom', 'Router', 'Accessories', 'Attendance Machine']
+export const CATEGORIES = ['IP Phone', 'Camera', 'Access Point','Switch', 'DECT', 'WiFi Phone', 'ATA', 'IP PBX', 'Video Conferencing', 'Intercom', 'Router', 'Accessories', 'Attendance Machine', 'Controller']
 
 export const WARRANTY_MONTHS = 12 // default warranty period, tweak as needed
 

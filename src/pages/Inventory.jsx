@@ -4684,6 +4684,8 @@ const PRODUCT_NAMES = [
   'GWN7660e',
   'GWN7664',
   'GWN7664e',
+  'GWN7670',
+  'Unify_U7_Pro',
   'GWN7801P',
   'GWN7802P',
   'GWN7803P',
@@ -4695,6 +4697,7 @@ const PRODUCT_NAMES = [
   'GWN7830',
   'GWN7831',
   'GWN7832',
+  'USW_Pro_24_PoE',
   'GSC3510',
   'GSC3505',
   'GSC3516',
@@ -4731,7 +4734,8 @@ const PRODUCT_NAMES = [
   'UCM6308A',
   'ZKTecoK40',
   'VVX400',
-  'VVX410'
+  'VVX410',
+  'UDM_SE'
 
 ]
 
@@ -4821,6 +4825,8 @@ const PRODUCT_CATEGORIES = {
   GWN7660e: 'Access Point',
   GWN7664: 'Access Point',
   GWN7664e: 'Access Point',
+  GWN7670: 'Access Point',
+  Unify_U7_Pro: 'Access Point',
 
   /* =========================
      NETWORK SWITCHES
@@ -4837,6 +4843,7 @@ const PRODUCT_CATEGORIES = {
   GWN7830: 'Switch',
   GWN7831: 'Switch',
   GWN7832: 'Switch',
+  USW_Pro_24_PoE: 'Switch',
 
   /* =========================
      INTERCOM / SPEAKER
@@ -4911,11 +4918,15 @@ const PRODUCT_CATEGORIES = {
      Attendance Machines
      ========================= */
 
-     ZKTecoK40: 'Attendance Machine'
+     ZKTecoK40: 'Attendance Machine',
+
+
+  /* =========================
+     GRP IP PHONES
+     ========================= */
+
+    UDM_SE: 'Controller'
 }
-
-
-
 /* ============================================================
    PRODUCT IMAGES MAPPING
    ============================================================ */
@@ -5025,6 +5036,12 @@ const PRODUCT_IMAGES = {
   GWN7664e:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTIGeh0z7oVPvJl7t7-lEIuAQ_R5Mqyue962mw3YSldPw&s=10',
 
+  GWN7670:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTIGeh0z7oVPvJl7t7-lEIuAQ_R5Mqyue962mw3YSldPw&s=10',  
+
+  Unify_U7_Pro:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTYocRytajvsD7txneaLIWOkgUgI-yIYHFCK5LWTYI-7w&s=10',
+    
   GWN7801P:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRtyVFWlyOv8NajgAvUBk8x9Qwtl92BHZWxDIsqtaFoWw&s=10',
 
@@ -5057,6 +5074,10 @@ const PRODUCT_IMAGES = {
 
   GWN7832:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSFf7s90Me7Jo1Xk7-H6SmTVi0ZYyaHTweoOX9PNi-_Hw&s=10',
+  USW_Pro_24_PoE:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRVbDTlhmfX1TMvXoVmhrITJuJ_ELhWPmuqAjVIYp27jA&s=10',  
+  UDM_SE:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSauz6PwPmMM-PACjGAWrYDt0VLrk2Yhhm8rbCRPrVsIQ&s=10',
 
   GSC3510:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ18SYzM1U_RQRfIQ3anPlROU_9edx16v1XAXvl8VLWug&s',
