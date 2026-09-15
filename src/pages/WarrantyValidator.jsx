@@ -419,6 +419,10 @@ const PRODUCT_IMAGES = {
 
   'GWN7664e': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTIGeh0z7oVPvJl7t7-lEIuAQ_R5Mqyue962mw3YSldPw&s=10',
 
+  'GWN7670': 'https://i.ibb.co/1Gb38ZW6/7670.png',
+
+  'Unify_U7_Pro':'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTYocRytajvsD7txneaLIWOkgUgI-yIYHFCK5LWTYI-7w&s=10',
+
   'GSC3510': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ18SYzM1U_RQRfIQ3anPlROU_9edx16v1XAXvl8VLWug&s',
 
   'GSC3505': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ18SYzM1U_RQRfIQ3anPlROU_9edx16v1XAXvl8VLWug&s',
