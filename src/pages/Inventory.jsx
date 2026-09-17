@@ -8651,6 +8651,8 @@ const PRODUCT_NAMES = [
   'DP760',
   'DP720',
   'DP730',
+  'WP810',
+  'WP816',
   'WP820',
   'WP822',
   'WP825',
@@ -8706,13 +8708,14 @@ const PRODUCT_CATEGORIES = {
   GXP2140: 'IP Phone',
   GXP2160: 'IP Phone',
   GXP2170: 'IP Phone',
-  GXP2200: 'IP Phone',
+
 
   /* =========================
      EXPANSION MODULE
      ========================= */
 
   GBX20: 'Accessories',
+  GXP2200: 'Accessories',
   PoE_Injector: 'Accessories',
 
 
@@ -8821,7 +8824,8 @@ const PRODUCT_CATEGORIES = {
   /* =========================
      WIFI PHONES
      ========================= */
-
+  WP810: 'WiFi Phone',
+  WP816: 'WiFi Phone',
   WP820: 'WiFi Phone',
   WP822: 'WiFi Phone',
   WP825: 'WiFi Phone',

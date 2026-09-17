@@ -45,7 +45,7 @@ export default function Login() {
           </p>
           <div className="mt-10 flex items-center gap-3 text-white/40 text-xs">
             <span className="h-1.5 w-1.5 rounded-full bg-teal pulse-ring" />
-            Realtime sync via Firebase
+            Realtime sync
           </div>
         </div>
       </div>
