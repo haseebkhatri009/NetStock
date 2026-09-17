@@ -9069,6 +9069,9 @@ const PRODUCT_IMAGES = {
   WP810:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2GGWflZwa0SqSOQrGEvQq3ou0essqC0HL7IbW0POtIA&s=10',
 
+  WP816:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQLHNcBwFIrlBLk_AcuhAYh6f-XF2-4ftCvNuvi_wIkBw&s=10',  
+
   WP820:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSVBhSwnJlwhpUesYK_q27i2Ib_CmTTzhVnrCF9fLFbbw&s=10',
 
