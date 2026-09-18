@@ -8624,6 +8624,7 @@ const PRODUCT_NAMES = [
   'GWN7664e',
   'GWN7670',
   'Unify_U7_Pro',
+  'GWN7700P',
   'GWN7801P',
   'GWN7802P',
   'GWN7803P',
@@ -8772,8 +8773,8 @@ const PRODUCT_CATEGORIES = {
   /* =========================
      NETWORK SWITCHES
      ========================= */
-
-  GWN7801P: 'Switch',
+  GWN7700P: 'Switch',
+ GWN7801P: 'Switch',
   GWN7802P: 'Switch',
   GWN7803P: 'Switch',
   GWN7806P: 'Switch',
@@ -8983,6 +8984,9 @@ const PRODUCT_IMAGES = {
 
   Unify_U7_Pro:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTYocRytajvsD7txneaLIWOkgUgI-yIYHFCK5LWTYI-7w&s=10',
+
+  GWN7700P:
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSr21EHEY1yKuJKMVsPGdNRhDw-x3I6OkEONP3F1moMqVddMsgVPf6XQZo&s=10',
     
   GWN7801P:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRtyVFWlyOv8NajgAvUBk8x9Qwtl92BHZWxDIsqtaFoWw&s=10',
