@@ -1108,7 +1108,7 @@ export default function CreateUser() {
           Company Profile
         </h2>
         <p className="text-xs text-slateink mb-4 -mt-2">
-          Ye details Invoice aur Delivery Challan pe automatically use hongi.
+           These details will be automatically used on the Invoice and Delivery Challan.
         </p>
 
         <form onSubmit={handleSaveCompany} className="space-y-4">
