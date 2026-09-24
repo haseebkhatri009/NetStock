@@ -13555,6 +13555,7 @@ const PRODUCT_NAMES = [
   'HT813',
   'HT814',
   'HT818',
+  'SPA8000',
   'HT841',
   'HT881',
   'UCM6300',
@@ -13669,6 +13670,7 @@ const PRODUCT_CATEGORIES = {
   HT812: 'ATA',
   HT813: 'ATA',
   HT814: 'ATA',
+  SPA8000: 'ATA',
   HT818: 'ATA',
   HT841: 'ATA',
   HT881: 'ATA',
@@ -13766,6 +13768,8 @@ const PRODUCT_IMAGES = {
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQxdYLBKWoDCUFBr5Ks51wsXFKUPTjbyRUrp29HBzONjw&s=10', 
   GWN7002:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQxdYLBKWoDCUFBr5Ks51wsXFKUPTjbyRUrp29HBzONjw&s=10', 
+  GWN7003:
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS7inX983lZVAem7Q3snIbiDUJFV2yTrg8A8helRmSGEQ&s',  
   GWN7062E:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQFoc3CUvYRNWBfM4i6kA_b0zomlvAdeIwmS5AwPFmfYQ&s=10', 
 
@@ -13919,6 +13923,9 @@ const PRODUCT_IMAGES = {
 
   HT818:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRCdolCIWQqCnddufBDMF3PS2WvYpT9tGr_RFG7rxXQgA&s=10',
+
+  SPA8000:
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRj__nAJI9Fc33ZnzOXRfclgM1wU2eDEvn0KMlDh88f8g&s=10',
 
   HT841:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSy9dGPNebgY0QQfLtWZOvVJ_0qMz5iZk71AS0NEGmJrA&s=10',
