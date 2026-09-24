@@ -13,6 +13,8 @@ import WarrantyValidator from './pages/WarrantyValidator'
 import CreateUser from './pages/CreateUser'
 import Quotation from './pages/Quotation'
 import DemoDeliveryChallan from './pages/DemoDeliveryChallan'
+import Items from './pages/Items'
+
 
 
 function Shell({ title, children }) {
@@ -139,6 +141,21 @@ export default function App() {
           <ProtectedRoute>
             <Shell title="Create User">
               <CreateUser />
+            </Shell>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* =========================
+          ITEMS (Confectionery Company Only)
+      ========================= */}
+
+      <Route
+        path="/items"
+        element={
+          <ProtectedRoute>
+            <Shell title="Items">
+              <Items />
             </Shell>
           </ProtectedRoute>
         }

@@ -123,7 +123,8 @@ import {
   UserPlus,
   LogOut,
   Radio,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Package
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
@@ -163,6 +164,7 @@ const OWNER_NAV = [
 const RESTRICTED_BASE_NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/customers', label: 'Customers', icon: Users },
+  { to: '/items', label: 'Items', icon: Package },
   { to: '/invoice', label: 'Invoice', icon: Receipt }
 ]
 
