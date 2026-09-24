@@ -3697,7 +3697,7 @@ export default function Dashboard() {
 
                   <p className="text-sm text-slateink">
 
-                    Abhi koi stock available nahi hai.
+                    No stock is currently available.
 
                   </p>
 
@@ -3956,8 +3956,7 @@ export default function Dashboard() {
 
                   <p className="text-sm text-slateink">
 
-                    Abhi tak koi Delivery Challan nahi bana.
-
+                     No Delivery Challan has been created yet.
                   </p>
 
                 </div>
@@ -4053,7 +4052,7 @@ export default function Dashboard() {
 
                   <p className="text-sm text-slateink">
 
-                    Abhi tak koi DC ya invoice nahi bana.
+                   No Delivery Challan or Invoice has been created yet.
 
                   </p>
 
