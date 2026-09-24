@@ -23339,7 +23339,7 @@ export default function DeliveryChallan() {
           <p className="font-medium text-ink">
             {searchTerm
               ? 'No matching delivery challans found'
-              : 'Abhi tak koi DC nahi banaya'}
+              : 'No Delivery Challan has been created yet.'}
           </p>
 
           {searchTerm && (

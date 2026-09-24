@@ -20112,7 +20112,7 @@ export default function Invoice() {
             <p className="font-medium text-ink">
               {searchTerm
                 ? 'No matching invoices found'
-                : 'Abhi tak koi invoice nahi bana'}
+                : 'No Invoice has been created yet.'}
             </p>
 
             {searchTerm && (
