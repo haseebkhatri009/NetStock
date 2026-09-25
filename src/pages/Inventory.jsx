@@ -13515,6 +13515,7 @@ const PRODUCT_NAMES = [
   'GWN7664',
   'GWN7664e',
   'GWN7670',
+  'GWN7672',
   'Unify_U7_Pro',
   'GWN7700P',
   'GWN7801P',
@@ -13624,6 +13625,7 @@ const PRODUCT_CATEGORIES = {
   GWN7664: 'Access Point',
   GWN7664e: 'Access Point',
   GWN7670: 'Access Point',
+  GWN7672: 'Access Point',
   Unify_U7_Pro: 'Access Point',
 
   GWN7700P: 'Switch',
@@ -13802,6 +13804,9 @@ const PRODUCT_IMAGES = {
 
   GWN7670:
     'https://i.ibb.co/1Gb38ZW6/7670.png',  
+
+  GWN7672:
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS7aFKEaL9pNig6SUiUH8U_lQ_U19TeYn9MIAtH2q57OA&s',   
 
   Unify_U7_Pro:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTYocRytajvsD7txneaLIWOkgUgI-yIYHFCK5LWTYI-7w&s=10',
