@@ -24269,9 +24269,11 @@ const PRODUCT_NAMES = [
   'GWN7630LR',
   'GWN7660',
   'GWN7660LR',
+  'GWN7660ELR',
   'GWN7660e',
   'GWN7664',
   'GWN7664e',
+  'GWN7664ELR',
   'GWN7670',
   'GWN7672',
   'Unify_U7_Pro',
@@ -24384,8 +24386,10 @@ const PRODUCT_CATEGORIES = {
   GWN7660: 'Access Point',
   GWN7660LR: 'Access Point',
   GWN7660e: 'Access Point',
+  GWN7660ELR: 'Access Point',
   GWN7664: 'Access Point',
   GWN7664e: 'Access Point',
+  GWN7664ELR: 'Access Point',
   GWN7670: 'Access Point',
   GWN7672: 'Access Point',
   Unify_U7_Pro: 'Access Point',
@@ -24567,11 +24571,17 @@ const PRODUCT_IMAGES = {
   GWN7660e:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtw_Y4gB8WPc0wgqlkupaFYMgTDqT2BsbMpABkW6vdVw&s=10',
 
+  GWN7660ELR:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSA_2DFOZV59Dt1jam7-MPu1nNN8-jm3mgyH6WjH1P5RA&s', 
+
   GWN7664:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTIGeh0z7oVPvJl7t7-lEIuAQ_R5Mqyue962mw3YSldPw&s=10',
 
   GWN7664e:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTIGeh0z7oVPvJl7t7-lEIuAQ_R5Mqyue962mw3YSldPw&s=10',
+
+  GWN7664ELR:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRq6T0P9dhZsUXDmm8wrQq2jQKQe25OyDRWaE9_ALBOzw&s=10',
 
   GWN7670:
     'https://i.ibb.co/1Gb38ZW6/7670.png',  
