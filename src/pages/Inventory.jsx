@@ -26528,7 +26528,7 @@ export default function Inventory() {
 
         <div>
           <h1 className="font-display text-2xl font-semibold text-ink">
-            Inventory
+            Inventory. 
           </h1>
 
           <p className="text-sm text-slateink mt-0.5">
@@ -27611,7 +27611,7 @@ export default function Inventory() {
 
               <div>
                 <p className="text-xs text-slateink">
-                  MAC Address
+                  MAC Address2
                 </p>
 
                 <p className="font-medium text-ink font-mono">
