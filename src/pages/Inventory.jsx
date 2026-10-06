@@ -26528,7 +26528,7 @@ export default function Inventory() {
 
         <div>
           <h1 className="font-display text-2xl font-semibold text-ink">
-            Inventory
+            Inventory2.0
           </h1>
 
           <p className="text-sm text-slateink mt-0.5">
