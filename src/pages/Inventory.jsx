@@ -24281,6 +24281,7 @@ const PRODUCT_NAMES = [
   'GWN7801P',
   'GWN7802P',
   'GWN7803P',
+  'GWN7803_Pro',
   'GWN7806P',
   'GWN7811P',
   'GWN7812P',
@@ -24398,6 +24399,7 @@ const PRODUCT_CATEGORIES = {
   GWN7801P: 'Switch',
   GWN7802P: 'Switch',
   GWN7803P: 'Switch',
+  GWN7803_Pro: 'Switch',
   GWN7806P: 'Switch',
   GWN7811P: 'Switch',
   GWN7812P: 'Switch',
@@ -24602,6 +24604,9 @@ const PRODUCT_IMAGES = {
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQU8eA9l0URgC_7mkrOPFcMq9Mbvv6rrglJFAQhetMlJQ&s=10',
 
   GWN7803P:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLDTDBFrw35QAY5asPy_qai4OtT4zmgFJq3EAuWGlFmw&s=10',
+
+  GWN7803_Pro:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLDTDBFrw35QAY5asPy_qai4OtT4zmgFJq3EAuWGlFmw&s=10',
 
   GWN7806P:
