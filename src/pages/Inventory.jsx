@@ -24333,7 +24333,8 @@ const PRODUCT_NAMES = [
   'VVX400',
   'VVX410',
   'UDM_SE',
-  'IMOU_Ranger_2_2MP'
+  'IMOU_Ranger_2_2MP',
+  'LVC_3012v'
 
 ]
 
@@ -24459,7 +24460,8 @@ const PRODUCT_CATEGORIES = {
 
   UDM_SE: 'Controller',
 
-  IMOU_Ranger_2_2MP: 'Camera'
+  IMOU_Ranger_2_2MP: 'Camera',
+  LVC_3012v: 'Camera'
 }
 
 /* ============================================================
@@ -24761,7 +24763,9 @@ const PRODUCT_IMAGES = {
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRNiIDieUUy8FFSjiVVqlVwyfdZchxf50gEvi1UP56iPw&s=10',
 
   IMOU_Ranger_2_2MP:
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSjH6ZM6IiWhb1Y_m3xnyYv1edtovtcuecJe2z-jCGqyQ&s=10'
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSjH6ZM6IiWhb1Y_m3xnyYv1edtovtcuecJe2z-jCGqyQ&s=10',
+  LVC_3012v:
+    'https://linurosystems.com/Content/images/products/Linuro/Tracking%20camera%20(1).webp'
 }
 
 /* ============================================================
