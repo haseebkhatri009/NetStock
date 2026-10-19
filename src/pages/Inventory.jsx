@@ -24276,7 +24276,10 @@ const PRODUCT_NAMES = [
   'GWN7664ELR',
   'GWN7670',
   'GWN7672',
-  'Unify_U7_Pro',
+  'UniFi_U7_Lite',
+  'UniFi_U7_Pro',
+  'UniFi_U7_LR',
+  'UniFi_UCG_Ultra',
   'GWN7700P',
   'GWN7801P',
   'GWN7802P',
@@ -24394,7 +24397,9 @@ const PRODUCT_CATEGORIES = {
   GWN7664ELR: 'Access Point',
   GWN7670: 'Access Point',
   GWN7672: 'Access Point',
-  Unify_U7_Pro: 'Access Point',
+  UniFi_U7_Pro: 'Access Point',
+  UniFi_U7_Lite: 'Access Point',
+  UniFi_U7_LR: 'Access Point',
 
   GWN7700P: 'Switch',
   GWN7801P: 'Switch',
@@ -24459,6 +24464,7 @@ const PRODUCT_CATEGORIES = {
   ZKTecoK40: 'Attendance Machine',
 
   UDM_SE: 'Controller',
+  UniFi_UCG_Ultra: 'Controller',
 
   IMOU_Ranger_2_2MP: 'Camera',
   LVC_3012v: 'Camera'
@@ -24593,8 +24599,14 @@ const PRODUCT_IMAGES = {
   GWN7672:
   'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS7aFKEaL9pNig6SUiUH8U_lQ_U19TeYn9MIAtH2q57OA&s',   
 
-  Unify_U7_Pro:
+  UniFi_U7_Pro:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTYocRytajvsD7txneaLIWOkgUgI-yIYHFCK5LWTYI-7w&s=10',
+
+  UniFi_U7_Lite:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTYocRytajvsD7txneaLIWOkgUgI-yIYHFCK5LWTYI-7w&s=10',
+    
+  UniFi_U7_LR:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTYocRytajvsD7txneaLIWOkgUgI-yIYHFCK5LWTYI-7w&s=10',  
 
   GWN7700P:
   'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSr21EHEY1yKuJKMVsPGdNRhDw-x3I6OkEONP3F1moMqVddMsgVPf6XQZo&s=10',
@@ -24638,6 +24650,9 @@ const PRODUCT_IMAGES = {
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRVbDTlhmfX1TMvXoVmhrITJuJ_ELhWPmuqAjVIYp27jA&s=10',  
   UDM_SE:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSauz6PwPmMM-PACjGAWrYDt0VLrk2Yhhm8rbCRPrVsIQ&s=10',
+
+  UniFi_UCG_Ultra:
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgXejywj9bnU4AqRIYOJlszNBaClhNRJZKR4e-Xc08ZQ&s',  
 
   GSC3510:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ18SYzM1U_RQRfIQ3anPlROU_9edx16v1XAXvl8VLWug&s',
