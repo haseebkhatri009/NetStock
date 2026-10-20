@@ -24337,8 +24337,8 @@ const PRODUCT_NAMES = [
   'VVX410',
   'UDM_SE',
   'IMOU_Ranger_2_2MP',
-  'LVC_3012v'
-
+  'LVC_3012v',
+  'Dinstar_C60GP'
 ]
 
 /* ============================================================
@@ -24378,6 +24378,7 @@ const PRODUCT_CATEGORIES = {
 
   VVX400: 'IP Phone',
   VVX410: 'IP Phone',
+  Dinstar_C60GP: 'IP Phone',
 
   GWN7001: 'Router',
   GWN7002: 'Router',
@@ -24776,6 +24777,9 @@ const PRODUCT_IMAGES = {
     
   VVX410:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRNiIDieUUy8FFSjiVVqlVwyfdZchxf50gEvi1UP56iPw&s=10',
+
+  Dinstar_C60GP:
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS4HTMDOKhyeDVWByIRYodaDl4oQRd9a56vbHMiwLV_Kw&s=10',  
 
   IMOU_Ranger_2_2MP:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSjH6ZM6IiWhb1Y_m3xnyYv1edtovtcuecJe2z-jCGqyQ&s=10',
