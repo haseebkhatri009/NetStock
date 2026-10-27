@@ -24263,6 +24263,7 @@ const PRODUCT_NAMES = [
   'GWN7002',
   'GWN7003',
   'GWN7062E',
+  'V_Sol_G_EPON_ONU',
   'GWN7600',
   'GWN7605',
   'GWN7630',
@@ -24285,6 +24286,7 @@ const PRODUCT_NAMES = [
   'GWN7802P',
   'GWN7803P',
   'GWN7803_Pro',
+  'GWN7803PL_Pro',
   'GWN7806P',
   'GWN7811P',
   'GWN7812P',
@@ -24384,6 +24386,7 @@ const PRODUCT_CATEGORIES = {
   GWN7002: 'Router',
   GWN7003: 'Router',
   GWN7062E: 'Router',
+  V_Sol_G_EPON_ONU: 'Router',
 
   GWN7600: 'Access Point',
   GWN7605: 'Access Point',
@@ -24407,6 +24410,7 @@ const PRODUCT_CATEGORIES = {
   GWN7802P: 'Switch',
   GWN7803P: 'Switch',
   GWN7803_Pro: 'Switch',
+  GWN7803PL_Pro: 'Switch',
   GWN7806P: 'Switch',
   GWN7811P: 'Switch',
   GWN7812P: 'Switch',
@@ -24561,6 +24565,9 @@ const PRODUCT_IMAGES = {
   GWN7062E:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQFoc3CUvYRNWBfM4i6kA_b0zomlvAdeIwmS5AwPFmfYQ&s=10', 
 
+  V_Sol_G_EPON_ONU:
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSwFbk-IgoqgeOVyFZDGlEEbRmt1PVSdcDgcYjVSnLzcw&s=10',  
+
   GWN7600:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ64VKR6Ih5Kp044lyJewroCh2NQA2OMq2TKf-Zi2t6Gw&s',
 
@@ -24620,6 +24627,9 @@ const PRODUCT_IMAGES = {
 
   GWN7803P:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLDTDBFrw35QAY5asPy_qai4OtT4zmgFJq3EAuWGlFmw&s=10',
+
+  GWN7803PL_Pro:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLDTDBFrw35QAY5asPy_qai4OtT4zmgFJq3EAuWGlFmw&s=10',  
 
   GWN7803_Pro:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLDTDBFrw35QAY5asPy_qai4OtT4zmgFJq3EAuWGlFmw&s=10',
