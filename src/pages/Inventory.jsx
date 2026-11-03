@@ -24338,6 +24338,7 @@ const PRODUCT_NAMES = [
   'VVX400',
   'VVX410',
   'UDM_SE',
+  'Omada_OC200',
   'IMOU_Ranger_2_2MP',
   'LVC_3012v',
   'Dinstar_C60GP'
@@ -24470,6 +24471,8 @@ const PRODUCT_CATEGORIES = {
 
   UDM_SE: 'Controller',
   UniFi_UCG_Ultra: 'Controller',
+  Omada_OC200: 'Controller',
+
 
   IMOU_Ranger_2_2MP: 'Camera',
   LVC_3012v: 'Camera'
@@ -24663,7 +24666,10 @@ const PRODUCT_IMAGES = {
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSauz6PwPmMM-PACjGAWrYDt0VLrk2Yhhm8rbCRPrVsIQ&s=10',
 
   UniFi_UCG_Ultra:
-  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgXejywj9bnU4AqRIYOJlszNBaClhNRJZKR4e-Xc08ZQ&s',  
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgXejywj9bnU4AqRIYOJlszNBaClhNRJZKR4e-Xc08ZQ&s', 
+  
+  Omada_OC200:
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQsSy_TyI6GnTYTREsZnHcBi5x7vFitkw-WlIw9SaCxww&s=10',
 
   GSC3510:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ18SYzM1U_RQRfIQ3anPlROU_9edx16v1XAXvl8VLWug&s',
