@@ -108,7 +108,6 @@
 
 
 
-
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
@@ -137,6 +136,15 @@ import { useAuth } from '../context/AuthContext'
    ============================================================ */
 
 const RESTRICTED_COMPANY_ID = 'fKxuXEaw4ihtBunMYEVRYdKRxsH2'
+
+
+/* ============================================================
+   SPECIAL USER EMAIL (Fatima)
+   ============================================================
+   Jis user ko sirf Dashboard, Invoice, Quotation dikhana hai
+   ============================================================ */
+
+const SPECIAL_USER_EMAIL = 'fatima@pearlnetworks.com.pk'
 
 
 // Base navigation for everyone
@@ -173,6 +181,19 @@ const RESTRICTED_OWNER_NAV = [
 ]
 
 
+/* ============================================================
+   SPECIAL USER NAVIGATION (Dashboard, Invoice, Quotation)
+   ============================================================
+   Fatima ke liye sirf ye 3 buttons
+   ============================================================ */
+
+const SPECIAL_USER_NAV = [
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/invoice', label: 'Invoice', icon: Receipt },
+  { to: '/quotation', label: 'Quotation', icon: FileSpreadsheet }
+]
+
+
 export default function Topbar({ title }) {
   const [open, setOpen] = useState(false)
   const { logout, company, profile, user, companyId } = useAuth()
@@ -189,6 +210,10 @@ export default function Topbar({ title }) {
   // Check if current company is restricted
   const isRestrictedCompany = companyId === RESTRICTED_COMPANY_ID
 
+  // Check if logged-in user is Fatima (special user)
+  const userEmail = (profile?.email || user?.email || '').toLowerCase().trim()
+  const isSpecialUser = userEmail === SPECIAL_USER_EMAIL
+
   // Choose which nav sets to use
   const activeBaseNav = isRestrictedCompany
     ? RESTRICTED_BASE_NAV
@@ -199,9 +224,15 @@ export default function Topbar({ title }) {
     : OWNER_NAV
 
   // Combine nav items based on role
-  const NAV = isOwner
+  let NAV = isOwner
     ? [...activeBaseNav, ...activeOwnerNav]
     : activeBaseNav
+
+  // SPECIAL USER (Fatima) override — sirf Dashboard, Invoice, Quotation
+  // (owner ya restricted sab ignore karke only ye 3 items)
+  if (isSpecialUser) {
+    NAV = SPECIAL_USER_NAV
+  }
 
   return (
     <>

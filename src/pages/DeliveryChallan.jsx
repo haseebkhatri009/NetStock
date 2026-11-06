@@ -1,3797 +1,3 @@
-// import { useEffect, useMemo, useState, useRef } from 'react'
-// import { ref, push, onValue, update, get, set } from 'firebase/database'
-// import {
-//   Plus,
-//   Trash2,
-//   FileText,
-//   Printer,
-//   Pencil,
-//   Download
-// } from 'lucide-react'
-
-// import { db } from '../firebase'
-// import { useAuth } from '../context/AuthContext'
-// import {
-//   formatDate,
-//   todayISO
-// } from '../utils/helpers'
-
-// import { Modal } from './Customers'
-// import Loader from '../components/Loader'
-
-
-// /* ============================================================
-//    COMPANY INFORMATION
-//    ============================================================ */
-
-// const COMPANY_NAME = 'Pearl Networks'
-// const COMPANY_LOGO = '/PN.png'
-
-// const COMPANY_ADDRESS = `
-// KCHS, Gohar Chamber, Office # 304,
-// Shahrah-e-Faisal, near Duty Free Shop,
-// Karachi, 75660
-// `
-
-// const COMPANY_EMAIL = 'info@globalonesystem.com'
-
-
-// /* ============================================================
-//    DC NUMBER
-//    ============================================================ */
-
-// function getTodayDateString() {
-//   const today = new Date()
-
-//   const year = today.getFullYear()
-//   const month = String(today.getMonth() + 1).padStart(2, '0')
-//   const day = String(today.getDate()).padStart(2, '0')
-
-//   return `${year}${month}${day}`
-// }
-
-
-// /* ============================================================
-//    GET NEXT DC NUMBER
-//    ============================================================ */
-
-// async function getNextDcNumber(companyId) {
-//   try {
-//     const dateStr = getTodayDateString()
-
-//     const counterRef = ref(
-//       db,
-//       `companies/${companyId}/counters/dc`
-//     )
-
-//     const snapshot = await get(counterRef)
-
-//     let lastNumber = 0
-//     let lastDate = ''
-
-//     if (snapshot.exists()) {
-//       const data = snapshot.val()
-
-//       lastNumber = data.number || 0
-//       lastDate = data.date || ''
-//     }
-
-//     let nextNumber = lastNumber + 1
-
-//     if (lastDate !== dateStr) {
-//       nextNumber = 1
-//     }
-
-//     const padded = String(nextNumber).padStart(4, '0')
-
-//     return `DC-${dateStr}-${padded}`
-
-//   } catch (error) {
-//     console.error('Error getting DC number:', error)
-
-//     const dateStr = getTodayDateString()
-//     const timestamp = Date.now().toString().slice(-6)
-
-//     return `DC-${dateStr}-${timestamp}`
-//   }
-// }
-
-
-// /* ============================================================
-//    INCREMENT DC COUNTER
-//    ============================================================ */
-
-// async function incrementDcCounter(companyId) {
-//   try {
-//     const dateStr = getTodayDateString()
-
-//     const counterRef = ref(
-//       db,
-//       `companies/${companyId}/counters/dc`
-//     )
-
-//     const snapshot = await get(counterRef)
-
-//     let lastNumber = 0
-//     let lastDate = ''
-
-//     if (snapshot.exists()) {
-//       const data = snapshot.val()
-
-//       lastNumber = data.number || 0
-//       lastDate = data.date || ''
-//     }
-
-//     let newNumber = lastNumber + 1
-
-//     if (lastDate !== dateStr) {
-//       newNumber = 1
-//     }
-
-//     await set(counterRef, {
-//       date: dateStr,
-//       number: newNumber
-//     })
-
-//     return {
-//       number: newNumber,
-//       date: dateStr
-//     }
-
-//   } catch (error) {
-//     console.error('Error incrementing counter:', error)
-//     return null
-//   }
-// }
-
-
-// /* ============================================================
-//    EMPTY ITEM
-//    ============================================================ */
-
-// const emptyItem = {
-//   stockId: '',
-//   name: '',
-//   category: '',
-//   mac: '',
-//   serial: '',
-//   qty: 1,
-//   available: 0
-// }
-
-
-// /* ============================================================
-//    MAIN DELIVERY CHALLAN
-//    ============================================================ */
-
-// export default function DeliveryChallan() {
-
-//   const { companyId, company } = useAuth()
-
-//   const [customers, setCustomers] = useState(null)
-//   const [stock, setStock] = useState(null)
-//   const [challans, setChallans] = useState(null)
-
-//   const [showForm, setShowForm] = useState(false)
-//   const [preview, setPreview] = useState(null)
-
-//   const [editingChallan, setEditingChallan] = useState(null)
-
-//   const [customerId, setCustomerId] = useState('')
-//   const [dcNumber, setDcNumber] = useState('')
-
-//   /* ============================================================
-//      NEW DC DATE
-//      ============================================================ */
-
-//   const [dcDate, setDcDate] = useState(todayISO())
-
-//   const [items, setItems] = useState([])
-
-//   const [pickStockId, setPickStockId] = useState('')
-//   const [pickQty, setPickQty] = useState(1)
-
-//   const [saving, setSaving] = useState(false)
-//   const [error, setError] = useState('')
-
-
-//   /* ============================================================
-//      LOAD DATA
-//      ============================================================ */
-
-//   useEffect(() => {
-
-//     if (!companyId) return
-
-//     const customersRef = ref(
-//       db,
-//       `companies/${companyId}/customers`
-//     )
-
-//     const stockRef = ref(
-//       db,
-//       `companies/${companyId}/stock`
-//     )
-
-//     const challansRef = ref(
-//       db,
-//       `companies/${companyId}/challans`
-//     )
-
-
-//     const unsubCustomers = onValue(
-//       customersRef,
-//       (snap) => {
-
-//         const value = snap.val() || {}
-
-//         const list = Object.entries(value).map(
-//           ([id, customer]) => ({
-//             id,
-//             ...customer
-//           })
-//         )
-
-//         setCustomers(list)
-
-//       },
-//       (err) => {
-
-//         console.error('customers read failed:', err)
-//         setCustomers([])
-
-//       }
-//     )
-
-
-//     const unsubStock = onValue(
-//       stockRef,
-//       (snap) => {
-
-//         const value = snap.val() || {}
-
-//         const list = Object.entries(value).map(
-//           ([id, stockItem]) => ({
-//             id,
-//             ...stockItem
-//           })
-//         )
-
-//         setStock(list)
-
-//       },
-//       (err) => {
-
-//         console.error('stock read failed:', err)
-//         setStock([])
-
-//       }
-//     )
-
-
-//     const unsubChallans = onValue(
-//       challansRef,
-//       (snap) => {
-
-//         const value = snap.val() || {}
-
-//         const list = Object.entries(value)
-//           .map(([id, challan]) => ({
-//             id,
-//             ...challan
-//           }))
-//           .sort(
-//             (a, b) =>
-//               (b.updatedAt || b.createdAt || 0) -
-//               (a.updatedAt || a.createdAt || 0)
-//           )
-
-//         setChallans(list)
-
-//       },
-//       (err) => {
-
-//         console.error('challans read failed:', err)
-//         setChallans([])
-
-//       }
-//     )
-
-
-//     return () => {
-
-//       unsubCustomers()
-//       unsubStock()
-//       unsubChallans()
-
-//     }
-
-//   }, [companyId])
-
-
-//   /* ============================================================
-//      AVAILABLE STOCK
-
-//      IMPORTANT:
-//      - Already added product dropdown se remove rahega.
-//      - New DC mein demo products nahi dikhenge.
-//      - Sold stock nahi dikhega.
-//      - Quantity 0 wala stock nahi dikhega.
-//      ============================================================ */
-
-//   const availableStock = useMemo(() => {
-
-//     if (!stock) return []
-
-//     /* ==========================================================
-//        JO PRODUCTS ALREADY ITEMS MEIN ADD HAIN
-//        UNKI IDs SET MEIN RAKH RAHE HAIN
-//        ========================================================== */
-
-//     const selectedIds = new Set(
-//       items
-//         .map((item) => item.stockId)
-//         .filter(Boolean)
-//     )
-
-
-//     return stock.filter((s) => {
-
-//       /* ========================================================
-//          IMPORTANT FIX
-
-//          Agar product already add ho chuka hai,
-//          to NEW DC aur EDIT DC dono mein
-//          dropdown se completely hide hoga.
-//          ======================================================== */
-
-//       if (selectedIds.has(s.id)) {
-//         return false
-//       }
-
-
-//       /* ========================================================
-//          CHECK DEMO PRODUCT
-//          ======================================================== */
-
-//       const status =
-//         String(s.status || '')
-//           .toLowerCase()
-//           .trim()
-
-//       const stockType =
-//         String(s.stockType || '')
-//           .toLowerCase()
-//           .trim()
-
-//       const type =
-//         String(s.type || '')
-//           .toLowerCase()
-//           .trim()
-
-
-//       const isDemoProduct =
-//         status === 'demo' ||
-//         stockType === 'demo' ||
-//         type === 'demo' ||
-//         s.demo === true ||
-//         s.isDemo === true ||
-//         s.isDemoProduct === true
-
-
-//       /* ========================================================
-//          NEW DC:
-
-//          Demo products completely hide karo.
-//          ======================================================== */
-
-//       if (!editingChallan && isDemoProduct) {
-//         return false
-//       }
-
-
-//       /* ========================================================
-//          EDIT MODE:
-
-//          Demo product agar already selected tha to ab
-//          items list mein hai, aur upar selectedIds ki wajah se
-//          dropdown se already hide ho jayega.
-
-//          Isliye yahan bhi demo product ko allow karne ki zarurat
-//          nahi hai.
-//          ======================================================== */
-
-//       if (editingChallan && isDemoProduct) {
-//         return false
-//       }
-
-
-//       /* ========================================================
-//          SOLD STOCK
-//          ======================================================== */
-
-//       if (status === 'sold') {
-//         return false
-//       }
-
-
-//       /* ========================================================
-//          QUANTITY
-//          ======================================================== */
-
-//       const quantity =
-//         Number(s.quantity) || 0
-
-
-//       return quantity > 0
-
-//     })
-
-//   }, [stock, items, editingChallan])
-
-
-//   /* ============================================================
-//      RESET FORM
-//      ============================================================ */
-
-//   function resetForm() {
-
-//     setCustomerId('')
-//     setDcNumber('')
-//     setDcDate(todayISO())
-//     setItems([])
-//     setPickStockId('')
-//     setPickQty(1)
-//     setError('')
-//     setEditingChallan(null)
-
-//   }
-
-
-//   /* ============================================================
-//      NEW CHALLAN
-//      ============================================================ */
-
-//   const openNewChallan = async () => {
-
-//     resetForm()
-
-//     setDcDate(todayISO())
-
-//     if (companyId) {
-
-//       const number =
-//         await getNextDcNumber(companyId)
-
-//       setDcNumber(number)
-
-//     }
-
-//     setShowForm(true)
-
-//   }
-
-
-//   /* ============================================================
-//      EDIT CHALLAN
-//      ============================================================ */
-
-//   function openEditChallan(challan) {
-
-//     setError('')
-
-//     setEditingChallan(challan)
-
-//     setCustomerId(
-//       challan.customerId || ''
-//     )
-
-//     setDcNumber(
-//       challan.dcNumber || ''
-//     )
-
-//     setDcDate(
-//       challan.date ||
-//       todayISO()
-//     )
-
-
-//     const oldItems =
-//       Array.isArray(challan.items)
-//         ? challan.items.map((item) => ({
-//             stockId: item.stockId || '',
-//             name: item.name || '',
-//             category: item.category || '',
-//             mac: item.mac || '',
-//             serial: item.serial || '',
-//             qty: Number(item.qty) || 1,
-//             available: Number(item.available) || 0
-//           }))
-//         : []
-
-
-//     setItems(oldItems)
-
-//     setPickStockId('')
-//     setPickQty(1)
-
-//     setShowForm(true)
-
-//   }
-
-
-//   /* ============================================================
-//      DELETE CHALLAN
-//      ============================================================ */
-
-//   async function handleDeleteChallan(id) {
-
-//     if (
-//       !confirm(
-//         'Are you sure you want to delete this Delivery Challan?'
-//       )
-//     ) {
-//       return
-//     }
-
-
-//     try {
-
-//       const challanRef = ref(
-//         db,
-//         `companies/${companyId}/challans/${id}`
-//       )
-
-//       const snap = await get(challanRef)
-
-
-//       if (!snap.exists()) {
-
-//         setError('Challan not found')
-//         return
-
-//       }
-
-
-//       const challan = snap.val()
-
-//       const oldItems =
-//         challan.items || []
-
-
-//       const updates = {}
-
-
-//       for (const item of oldItems) {
-
-//         if (!item.stockId) continue
-
-
-//         const stockRef = ref(
-//           db,
-//           `companies/${companyId}/stock/${item.stockId}`
-//         )
-
-//         const stockSnap =
-//           await get(stockRef)
-
-
-//         if (!stockSnap.exists()) continue
-
-
-//         const stockItem =
-//           stockSnap.val()
-
-
-//         if (
-//           stockItem.mac ||
-//           stockItem.serial ||
-//           item.mac ||
-//           item.serial
-//         ) {
-
-//           updates[
-//             `companies/${companyId}/stock/${item.stockId}/status`
-//           ] = 'available'
-
-//           updates[
-//             `companies/${companyId}/stock/${item.stockId}/soldTo`
-//           ] = null
-
-//           updates[
-//             `companies/${companyId}/stock/${item.stockId}/soldToId`
-//           ] = null
-
-//           updates[
-//             `companies/${companyId}/stock/${item.stockId}/soldDate`
-//           ] = null
-
-//           updates[
-//             `companies/${companyId}/stock/${item.stockId}/dcNumber`
-//           ] = null
-
-//         } else {
-
-//           const currentQty =
-//             Number(stockItem.quantity) || 0
-
-//           const restoredQty =
-//             currentQty +
-//             (Number(item.qty) || 0)
-
-
-//           updates[
-//             `companies/${companyId}/stock/${item.stockId}/quantity`
-//           ] = restoredQty
-
-//           updates[
-//             `companies/${companyId}/stock/${item.stockId}/status`
-//           ] = 'available'
-
-//           updates[
-//             `companies/${companyId}/stock/${item.stockId}/soldTo`
-//           ] = null
-
-//           updates[
-//             `companies/${companyId}/stock/${item.stockId}/soldToId`
-//           ] = null
-
-//           updates[
-//             `companies/${companyId}/stock/${item.stockId}/soldDate`
-//           ] = null
-
-//           updates[
-//             `companies/${companyId}/stock/${item.stockId}/dcNumber`
-//           ] = null
-
-//         }
-
-//       }
-
-
-//       updates[
-//         `companies/${companyId}/challans/${id}`
-//       ] = null
-
-
-//       await update(
-//         ref(db),
-//         updates
-//       )
-
-
-//     } catch (err) {
-
-//       console.error('Delete error:', err)
-
-//       setError(
-//         'Failed to delete challan'
-//       )
-
-//     }
-
-//   }
-
-
-//   /* ============================================================
-//      ADD ITEM
-//      ============================================================ */
-
-//   function addItem() {
-
-//     if (!stock) return
-
-
-//     const selectedStock =
-//       stock.find(
-//         (s) => s.id === pickStockId
-//       )
-
-
-//     if (!selectedStock) return
-
-
-//     /* ==========================================================
-//        EXTRA SAFETY:
-
-//        Already added product dobara add nahi hoga.
-//        ========================================================== */
-
-//     const alreadyAdded =
-//       items.some(
-//         (item) =>
-//           item.stockId ===
-//           selectedStock.id
-//       )
-
-
-//     if (alreadyAdded) {
-
-//       setError(
-//         'Ye product already list mein hai.'
-//       )
-
-//       return
-
-//     }
-
-
-//     /* ==========================================================
-//        DEMO PRODUCT CHECK
-//        ========================================================== */
-
-//     const status =
-//       String(selectedStock.status || '')
-//         .toLowerCase()
-//         .trim()
-
-//     const stockType =
-//       String(selectedStock.stockType || '')
-//         .toLowerCase()
-//         .trim()
-
-//     const type =
-//       String(selectedStock.type || '')
-//         .toLowerCase()
-//         .trim()
-
-//     const isDemoProduct =
-//       status === 'demo' ||
-//       stockType === 'demo' ||
-//       type === 'demo' ||
-//       selectedStock.demo === true ||
-//       selectedStock.isDemo === true ||
-//       selectedStock.isDemoProduct === true
-
-
-//     if (!editingChallan && isDemoProduct) {
-
-//       setError(
-//         'Demo product Delivery Challan mein add nahi kiya ja sakta.'
-//       )
-
-//       return
-
-//     }
-
-
-//     const isSerialized =
-//       !!selectedStock.mac ||
-//       !!selectedStock.serial
-
-
-//     let qty = 1
-
-
-//     if (!isSerialized) {
-
-//       qty = Math.min(
-//         Math.max(
-//           1,
-//           Number(pickQty) || 1
-//         ),
-//         Math.max(
-//           1,
-//           Number(selectedStock.quantity) || 1
-//         )
-//       )
-
-//     }
-
-
-//     setItems([
-//       ...items,
-//       {
-//         stockId: selectedStock.id,
-//         name: selectedStock.name || '',
-//         category: selectedStock.category || '',
-//         mac: selectedStock.mac || '',
-//         serial: selectedStock.serial || '',
-//         qty,
-//         available:
-//           Number(selectedStock.quantity) || 0
-//       }
-//     ])
-
-
-//     setPickStockId('')
-//     setPickQty(1)
-//     setError('')
-
-//   }
-
-
-//   /* ============================================================
-//      REMOVE ITEM
-//      ============================================================ */
-
-//   function removeItem(stockId) {
-
-//     setItems(
-//       items.filter(
-//         (item) =>
-//           item.stockId !== stockId
-//       )
-//     )
-
-//   }
-
-
-//   /* ============================================================
-//      CHANGE QTY
-//      ============================================================ */
-
-//   function changeItemQty(
-//     stockId,
-//     value
-//   ) {
-
-//     const stockItem =
-//       stock?.find(
-//         (s) => s.id === stockId
-//       )
-
-
-//     if (!stockItem) return
-
-
-//     const currentQty =
-//       Number(value) || 1
-
-//     const maxQty =
-//       Number(stockItem.quantity) || 1
-
-//     const isSerialized =
-//       !!stockItem.mac ||
-//       !!stockItem.serial
-
-
-//     const finalQty =
-//       isSerialized
-//         ? 1
-//         : Math.min(
-//             Math.max(1, currentQty),
-//             maxQty
-//           )
-
-
-//     setItems(
-//       items.map((item) =>
-//         item.stockId === stockId
-//           ? {
-//               ...item,
-//               qty: finalQty
-//             }
-//           : item
-//       )
-//     )
-
-//   }
-
-
-//   /* ============================================================
-//      RESTORE OLD STOCK
-//      ============================================================ */
-
-//   async function restoreOldStock(
-//     oldItems
-//   ) {
-
-//     if (!oldItems?.length) return {}
-
-//     const updates = {}
-
-
-//     for (const item of oldItems) {
-
-//       if (!item.stockId) continue
-
-
-//       const stockRef = ref(
-//         db,
-//         `companies/${companyId}/stock/${item.stockId}`
-//       )
-
-
-//       const snap =
-//         await get(stockRef)
-
-
-//       if (!snap.exists()) continue
-
-
-//       const stockItem =
-//         snap.val()
-
-
-//       if (
-//         stockItem.mac ||
-//         stockItem.serial ||
-//         item.mac ||
-//         item.serial
-//       ) {
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/status`
-//         ] = 'available'
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/soldTo`
-//         ] = null
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/soldToId`
-//         ] = null
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/soldDate`
-//         ] = null
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/dcNumber`
-//         ] = null
-
-//       } else {
-
-//         const currentQty =
-//           Number(stockItem.quantity) || 0
-
-//         const restoredQty =
-//           currentQty +
-//           (Number(item.qty) || 0)
-
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/quantity`
-//         ] = restoredQty
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/status`
-//         ] = 'available'
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/soldTo`
-//         ] = null
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/soldToId`
-//         ] = null
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/soldDate`
-//         ] = null
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/dcNumber`
-//         ] = null
-
-//       }
-
-//     }
-
-
-//     return updates
-
-//   }
-
-
-//   /* ============================================================
-//      DEDUCT STOCK
-//      ============================================================ */
-
-//   async function deductStock(
-//     newItems,
-//     customer,
-//     customerId,
-//     dcNumber,
-//     date
-//   ) {
-
-//     const updates = {}
-
-
-//     for (const item of newItems) {
-
-//       if (!item.stockId) continue
-
-
-//       const stockRef = ref(
-//         db,
-//         `companies/${companyId}/stock/${item.stockId}`
-//       )
-
-
-//       const snap =
-//         await get(stockRef)
-
-
-//       if (!snap.exists()) continue
-
-
-//       const stockItem =
-//         snap.val()
-
-
-//       if (
-//         stockItem.mac ||
-//         stockItem.serial
-//       ) {
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/status`
-//         ] = 'sold'
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/soldTo`
-//         ] = customer.name
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/soldToId`
-//         ] = customerId
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/soldDate`
-//         ] = date
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/dcNumber`
-//         ] = dcNumber
-
-//       } else {
-
-//         const currentQty =
-//           Number(stockItem.quantity) || 0
-
-//         const requestedQty =
-//           Number(item.qty) || 0
-
-
-//         if (
-//           requestedQty >
-//           currentQty
-//         ) {
-
-//           throw new Error(
-//             `Stock kam hai: ${item.name}`
-//           )
-
-//         }
-
-
-//         const newQty =
-//           Math.max(
-//             0,
-//             currentQty -
-//             requestedQty
-//           )
-
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/quantity`
-//         ] = newQty
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/soldDate`
-//         ] = date
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/soldTo`
-//         ] = customer.name
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/soldToId`
-//         ] = customerId
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/dcNumber`
-//         ] = dcNumber
-
-//         updates[
-//           `companies/${companyId}/stock/${item.stockId}/status`
-//         ] =
-//           newQty === 0
-//             ? 'sold'
-//             : 'available'
-
-//       }
-
-//     }
-
-
-//     return updates
-
-//   }
-
-
-//   /* ============================================================
-//      SUBMIT
-//      ============================================================ */
-
-//   async function handleSubmit(e) {
-
-//     e.preventDefault()
-
-//     setError('')
-
-
-//     if (
-//       !customerId ||
-//       items.length === 0
-//     ) {
-
-//       setError(
-//         'Customer aur kam az kam aik product select karein.'
-//       )
-
-//       return
-
-//     }
-
-
-//     if (!customers) {
-
-//       setError(
-//         'Customers load nahi hue.'
-//       )
-
-//       return
-
-//     }
-
-
-//     const customer =
-//       customers.find(
-//         (c) => c.id === customerId
-//       )
-
-
-//     if (!customer) {
-
-//       setError(
-//         'Customer nahi mila.'
-//       )
-
-//       return
-
-//     }
-
-
-//     setSaving(true)
-
-
-//     try {
-
-//       const date =
-//         editingChallan?.date ||
-//         dcDate ||
-//         todayISO()
-
-
-//       let finalDcNumber =
-//         dcNumber
-
-
-//       if (!editingChallan) {
-
-//         await incrementDcCounter(
-//           companyId
-//         )
-
-
-//         if (
-//           !finalDcNumber ||
-//           finalDcNumber.trim() === ''
-//         ) {
-
-//           const dateStr =
-//             getTodayDateString()
-
-//           const timestamp =
-//             Date.now()
-//               .toString()
-//               .slice(-6)
-
-
-//           finalDcNumber =
-//             `DC-${dateStr}-${timestamp}`
-
-//           setDcNumber(
-//             finalDcNumber
-//           )
-
-//         }
-
-//       }
-
-
-//       /* ========================================================
-//          EDIT CHALLAN
-//          ======================================================== */
-
-//       if (editingChallan) {
-
-//         const restoreUpdates =
-//           await restoreOldStock(
-//             editingChallan.items || []
-//           )
-
-
-//         const deductUpdates =
-//           await deductStock(
-//             items,
-//             customer,
-//             customerId,
-//             finalDcNumber,
-//             date
-//           )
-
-
-//         const allUpdates = {
-
-//           ...restoreUpdates,
-
-//           ...deductUpdates,
-
-
-//           [`companies/${companyId}/challans/${editingChallan.id}/dcNumber`]:
-//             finalDcNumber,
-
-//           [`companies/${companyId}/challans/${editingChallan.id}/date`]:
-//             date,
-
-//           [`companies/${companyId}/challans/${editingChallan.id}/customerId`]:
-//             customerId,
-
-//           [`companies/${companyId}/challans/${editingChallan.id}/customerName`]:
-//             customer.name,
-
-//           [`companies/${companyId}/challans/${editingChallan.id}/customerCompany`]:
-//             customer.company || '',
-
-//           [`companies/${companyId}/challans/${editingChallan.id}/customerPhone`]:
-//             customer.phone || '',
-
-//           [`companies/${companyId}/challans/${editingChallan.id}/customerAddress`]:
-//             customer.address || '',
-
-//           [`companies/${companyId}/challans/${editingChallan.id}/companyName`]:
-//             company?.name ||
-//             COMPANY_NAME,
-
-//           [`companies/${companyId}/challans/${editingChallan.id}/items`]:
-//             items,
-
-//           [`companies/${companyId}/challans/${editingChallan.id}/updatedAt`]:
-//             Date.now()
-
-//         }
-
-
-//         await update(
-//           ref(db),
-//           allUpdates
-//         )
-
-
-//         setPreview({
-
-//           id: editingChallan.id,
-
-//           dcNumber:
-//             finalDcNumber,
-
-//           date,
-
-//           customerId,
-
-//           customer,
-
-//           items,
-
-//           companyName:
-//             company?.name ||
-//             COMPANY_NAME
-
-//         })
-
-
-//         setShowForm(false)
-
-//         resetForm()
-
-//         return
-
-//       }
-
-
-//       /* ========================================================
-//          NEW CHALLAN
-//          ======================================================== */
-
-//       const challansRef =
-//         ref(
-//           db,
-//           `companies/${companyId}/challans`
-//         )
-
-
-//       const newRef =
-//         await push(
-//           challansRef,
-//           {
-
-//             dcNumber:
-//               finalDcNumber,
-
-//             date,
-
-//             customerId,
-
-//             customerName:
-//               customer.name,
-
-//             customerCompany:
-//               customer.company || '',
-
-//             customerPhone:
-//               customer.phone || '',
-
-//             customerAddress:
-//               customer.address || '',
-
-//             companyName:
-//               company?.name ||
-//               COMPANY_NAME,
-
-//             items,
-
-//             createdAt:
-//               Date.now()
-
-//           }
-//         )
-
-
-//       const updates =
-//         await deductStock(
-//           items,
-//           customer,
-//           customerId,
-//           finalDcNumber,
-//           date
-//         )
-
-
-//       await update(
-//         ref(db),
-//         updates
-//       )
-
-
-//       setPreview({
-
-//         id: newRef.key,
-
-//         dcNumber:
-//           finalDcNumber,
-
-//         date,
-
-//         customerId,
-
-//         customer,
-
-//         items,
-
-//         companyName:
-//           company?.name ||
-//           COMPANY_NAME
-
-//       })
-
-
-//       setShowForm(false)
-
-//       resetForm()
-
-
-//     } catch (err) {
-
-//       console.error(
-//         'Challan save/update failed:',
-//         err
-//       )
-
-//       setError(
-//         err?.message ||
-//         'Challan save nahi ho saka. Dobara koshish karein.'
-//       )
-
-//     } finally {
-
-//       setSaving(false)
-
-//     }
-
-//   }
-
-
-//   /* ============================================================
-//      PDF PREVIEW
-//      ============================================================ */
-
-//   function handleDownloadPdf(challan) {
-
-//     const previewChallan = {
-
-//       id: challan.id,
-
-//       dcNumber:
-//         challan.dcNumber,
-
-//       date:
-//         challan.date,
-
-//       items:
-//         challan.items || [],
-
-//       companyName:
-//         challan.companyName ||
-//         COMPANY_NAME,
-
-//       customer: {
-
-//         name:
-//           challan.customerName,
-
-//         company:
-//           challan.customerCompany,
-
-//         phone:
-//           challan.customerPhone,
-
-//         address:
-//           challan.customerAddress
-
-//       }
-
-//     }
-
-
-//     setPreview(
-//       previewChallan
-//     )
-
-//   }
-
-
-//   /* ============================================================
-//      PAGE
-//      ============================================================ */
-
-//   return (
-
-//     <div>
-
-//       {/* HEADER */}
-
-//       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-
-//         <div>
-
-//           <h1 className="font-display text-2xl font-semibold text-ink">
-//             Delivery Challan
-//           </h1>
-
-//           <p className="text-sm text-slateink mt-0.5">
-//             Create a DC — stock will be automatically deducted.
-//           </p>
-
-//         </div>
-
-
-//         <button
-//           onClick={openNewChallan}
-//           className="flex items-center gap-2 rounded-lg bg-ink text-white text-sm font-medium px-4 py-2.5 hover:bg-inkSoft transition-colors self-start"
-//         >
-
-//           <Plus size={16} />
-
-//           New Challan
-
-//         </button>
-
-//       </div>
-
-
-//       {/* CHALLAN LIST */}
-
-//       {challans === null ? (
-
-//         <Loader />
-
-//       ) : challans.length === 0 ? (
-
-//         <div className="border border-dashed border-line rounded-2xl py-16 flex flex-col items-center justify-center text-center">
-
-//           <FileText
-//             className="text-slateink mb-3"
-//             size={28}
-//           />
-
-//           <p className="font-medium text-ink">
-//             Abhi tak koi DC nahi banaya
-//           </p>
-
-//         </div>
-
-//       ) : (
-
-//         <div className="bg-surface rounded-2xl border border-line shadow-card overflow-hidden">
-
-//           <div className="overflow-x-auto">
-
-//             <table className="w-full text-sm">
-
-//               <thead>
-
-//                 <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-slateink">
-
-//                   <th className="px-4 py-3 font-medium">
-//                     DC #
-//                   </th>
-
-//                   <th className="px-4 py-3 font-medium">
-//                     Customer
-//                   </th>
-
-//                   <th className="px-4 py-3 font-medium">
-//                     Items
-//                   </th>
-
-//                   <th className="px-4 py-3 font-medium">
-//                     Date
-//                   </th>
-
-//                   <th className="px-4 py-3 font-medium">
-//                     Actions
-//                   </th>
-
-//                 </tr>
-
-//               </thead>
-
-
-//               <tbody>
-
-//                 {challans.map((c) => (
-
-//                   <tr
-//                     key={c.id}
-//                     className="border-b border-line last:border-0 hover:bg-paper/60"
-//                   >
-
-//                     <td className="px-4 py-3 font-mono text-xs">
-//                       {c.dcNumber}
-//                     </td>
-
-
-//                     <td className="px-4 py-3">
-
-//                       <p className="font-medium text-ink">
-//                         {c.customerName}
-//                       </p>
-
-//                       <p className="text-xs text-slateink">
-//                         {c.customerCompany}
-//                       </p>
-
-//                     </td>
-
-
-//                     <td className="px-4 py-3 text-xs text-slateink">
-//                       {c.items?.length || 0} item(s)
-//                     </td>
-
-
-//                     <td className="px-4 py-3 text-xs font-mono text-slateink">
-//                       {formatDate(c.date)}
-//                     </td>
-
-
-//                     <td className="px-4 py-3">
-
-//                       <div className="flex justify-end items-center gap-2 flex-wrap">
-
-//                         <button
-//                           onClick={() =>
-//                             setPreview({
-//                               id: c.id,
-//                               dcNumber: c.dcNumber,
-//                               date: c.date,
-//                               items: c.items || [],
-//                               companyName:
-//                                 c.companyName ||
-//                                 COMPANY_NAME,
-//                               customer: {
-//                                 name:
-//                                   c.customerName,
-//                                 company:
-//                                   c.customerCompany,
-//                                 phone:
-//                                   c.customerPhone,
-//                                 address:
-//                                   c.customerAddress
-//                               }
-//                             })
-//                           }
-//                           className="flex items-center gap-1.5 text-teal-dark text-xs font-medium hover:underline"
-//                         >
-
-//                           <Printer size={14} />
-
-//                           View
-
-//                         </button>
-
-
-//                         <button
-//                           onClick={() =>
-//                             openEditChallan(c)
-//                           }
-//                           className="flex items-center gap-1.5 text-ink text-xs font-medium hover:underline"
-//                         >
-
-//                           <Pencil size={14} />
-
-//                           Edit
-
-//                         </button>
-
-
-//                         <button
-//                           onClick={() =>
-//                             handleDownloadPdf(c)
-//                           }
-//                           className="flex items-center gap-1.5 text-red-600 text-xs font-medium hover:text-red-800"
-//                         >
-
-//                           <Download size={14} />
-
-//                           PDF
-
-//                         </button>
-
-
-//                         <button
-//                           onClick={() =>
-//                             handleDeleteChallan(c.id)
-//                           }
-//                           className="flex items-center gap-1.5 text-coral text-xs font-medium hover:text-red-700"
-//                         >
-
-//                           <Trash2 size={14} />
-
-//                           Delete
-
-//                         </button>
-
-//                       </div>
-
-//                     </td>
-
-//                   </tr>
-
-//                 ))}
-
-//               </tbody>
-
-//             </table>
-
-//           </div>
-
-//         </div>
-
-//       )}
-
-
-//       {/* CREATE / EDIT */}
-
-//       {showForm && (
-
-//         <Modal
-//           title={
-//             editingChallan
-//               ? `Edit Delivery Challan — ${editingChallan.dcNumber}`
-//               : 'New Delivery Challan'
-//           }
-//           onClose={() => {
-//             setShowForm(false)
-//             resetForm()
-//           }}
-//           wide
-//         >
-
-//           <form
-//             onSubmit={handleSubmit}
-//             className="space-y-5"
-//           >
-
-//             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-//               <label className="block">
-
-//                 <span className="text-xs font-medium text-slateink">
-//                   DC Number *
-//                 </span>
-
-//                 <input
-//                   type="text"
-//                   value={dcNumber}
-//                   onChange={(e) =>
-//                     setDcNumber(e.target.value)
-//                   }
-//                   className="input mt-1"
-//                   placeholder="DC-YYYYMMDD-0001"
-//                   required
-//                 />
-
-//                 <small className="text-xs text-slateink mt-1 block">
-//                   Format: DC-YYYYMMDD-0001
-//                 </small>
-
-//               </label>
-
-
-//               <label className="block">
-
-//                 <span className="text-xs font-medium text-slateink">
-//                   Customer *
-//                 </span>
-
-//                 <select
-//                   value={customerId}
-//                   onChange={(e) =>
-//                     setCustomerId(e.target.value)
-//                   }
-//                   className="input mt-1"
-//                   required
-//                 >
-
-//                   <option value="">
-//                     Select customer…
-//                   </option>
-
-//                   {(customers || []).map(
-//                     (c) => (
-
-//                       <option
-//                         key={c.id}
-//                         value={c.id}
-//                       >
-//                         {c.name}
-//                         {c.company
-//                           ? ` — ${c.company}`
-//                           : ''}
-//                       </option>
-
-//                     )
-//                   )}
-
-//                 </select>
-
-//               </label>
-
-//             </div>
-
-
-//             {/* DATE */}
-
-//             <div>
-
-//               <span className="text-xs font-medium text-slateink">
-//                 Date
-//               </span>
-
-//               <input
-//                 type="date"
-//                 value={
-//                   editingChallan
-//                     ? (
-//                         editingChallan.date ||
-//                         todayISO()
-//                       )
-//                     : dcDate
-//                 }
-//                 onChange={(e) => {
-
-//                   if (editingChallan) {
-
-//                     setEditingChallan({
-//                       ...editingChallan,
-//                       date: e.target.value
-//                     })
-
-//                   } else {
-
-//                     setDcDate(
-//                       e.target.value
-//                     )
-
-//                   }
-
-//                 }}
-//                 className="input mt-1"
-//               />
-
-//             </div>
-
-
-//             {/* ADD PRODUCTS */}
-
-//             <div className="border border-line rounded-xl p-4">
-
-//               <p className="text-xs font-medium text-slateink mb-3">
-//                 Add Products
-//               </p>
-
-
-//               <div className="flex flex-col sm:flex-row gap-2">
-
-//                 <select
-//                   value={pickStockId}
-//                   onChange={(e) =>
-//                     setPickStockId(
-//                       e.target.value
-//                     )
-//                   }
-//                   className="input flex-1"
-//                 >
-
-//                   <option value="">
-//                     Select from stock…
-//                   </option>
-
-//                   {availableStock.map(
-//                     (s) => (
-
-//                       <option
-//                         key={s.id}
-//                         value={s.id}
-//                       >
-
-//                         {s.category
-//                           ? `${s.category} — `
-//                           : ''}
-
-//                         {s.name}
-
-//                         {s.mac
-//                           ? ` (MAC ${s.mac})`
-//                           : s.serial
-//                             ? ` (Serial ${s.serial})`
-//                             : ` (Qty ${s.quantity})`}
-
-//                       </option>
-
-//                     )
-//                   )}
-
-//                 </select>
-
-
-//                 {!stock?.find(
-//                   (s) =>
-//                     s.id ===
-//                     pickStockId
-//                 )?.mac &&
-//                   !stock?.find(
-//                     (s) =>
-//                       s.id ===
-//                       pickStockId
-//                   )?.serial && (
-
-//                     <input
-//                       type="number"
-//                       min={1}
-//                       value={pickQty}
-//                       onChange={(e) =>
-//                         setPickQty(
-//                           e.target.value
-//                         )
-//                       }
-//                       className="input sm:w-24"
-//                       placeholder="Qty"
-//                     />
-
-//                   )}
-
-
-//                 <button
-//                   type="button"
-//                   onClick={addItem}
-//                   disabled={!pickStockId}
-//                   className="rounded-lg bg-teal text-white text-sm font-medium px-4 py-2.5 hover:bg-teal-dark disabled:opacity-50 shrink-0"
-//                 >
-
-//                   Add
-
-//                 </button>
-
-//               </div>
-
-
-//               {items.length > 0 && (
-
-//                 <div className="mt-4 space-y-2">
-
-//                   {items.map((item) => {
-
-//                     const serialized =
-//                       !!item.mac ||
-//                       !!item.serial
-
-
-//                     return (
-
-//                       <div
-//                         key={item.stockId}
-//                         className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-paper rounded-lg px-3 py-3 text-sm"
-//                       >
-
-//                         <div>
-
-//                           <div className="font-medium text-ink">
-//                             {item.name}
-//                           </div>
-
-//                           <div className="text-xs text-slateink mt-1">
-
-//                             {item.category &&
-//                               `${item.category} · `}
-
-//                             {item.mac &&
-//                               `MAC ${item.mac}`}
-
-//                             {item.serial &&
-//                               `Serial ${item.serial}`}
-
-//                             {!item.mac &&
-//                               !item.serial &&
-//                               `Qty ${item.qty}`}
-
-//                           </div>
-
-//                         </div>
-
-
-//                         <div className="flex items-center gap-3">
-
-//                           {!serialized && (
-
-//                             <input
-//                               type="number"
-//                               min={1}
-//                               value={item.qty}
-//                               onChange={(e) =>
-//                                 changeItemQty(
-//                                   item.stockId,
-//                                   e.target.value
-//                                 )
-//                               }
-//                               className="input w-24"
-//                             />
-
-//                           )}
-
-
-//                           <button
-//                             type="button"
-//                             onClick={() =>
-//                               removeItem(
-//                                 item.stockId
-//                               )
-//                             }
-//                             className="text-coral"
-//                             title="Remove"
-//                           >
-
-//                             <Trash2 size={16} />
-
-//                           </button>
-
-//                         </div>
-
-//                       </div>
-
-//                     )
-
-//                   })}
-
-//                 </div>
-
-//               )}
-
-//             </div>
-
-
-//             {error && (
-
-//               <p className="text-xs font-medium text-coral bg-coral-light rounded-lg px-3 py-2">
-//                 {error}
-//               </p>
-
-//             )}
-
-
-//             <button
-//               type="submit"
-//               disabled={saving}
-//               className="w-full rounded-lg bg-ink text-white text-sm font-medium py-2.5 hover:bg-inkSoft transition-colors disabled:opacity-60"
-//             >
-
-//               {saving
-//                 ? editingChallan
-//                   ? 'Updating…'
-//                   : 'Saving…'
-//                 : editingChallan
-//                   ? 'Update Challan'
-//                   : 'Generate Challan'}
-
-//             </button>
-
-//           </form>
-
-//         </Modal>
-
-//       )}
-
-
-//       {/* PREVIEW */}
-
-//       {preview && (
-
-//         <PrintableModal
-//           doc={preview}
-//           type="Delivery Challan"
-//           onClose={() =>
-//             setPreview(null)
-//           }
-//         />
-
-//       )}
-
-//     </div>
-
-//   )
-
-// }
-
-
-// /* =================================================================
-//    PRINTABLE DELIVERY CHALLAN
-//    ================================================================= */
-
-// export function PrintableModal({
-//   doc,
-//   type,
-//   onClose
-// }) {
-
-//   const printRef =
-//     useRef(null)
-
-
-//   /* ============================================================
-//      PRINT
-//      ============================================================ */
-
-//   function handlePrint() {
-
-//     if (!printRef.current)
-//       return
-
-
-//     const content =
-//       printRef.current.innerHTML
-
-
-//     const win =
-//       window.open(
-//         '',
-//         '_blank',
-//         'width=1000,height=900'
-//       )
-
-
-//     if (!win) {
-
-//       alert(
-//         'Popup blocked hai. Browser mein popup allow karein.'
-//       )
-
-//       return
-
-//     }
-
-
-//     win.document.open()
-
-
-//     win.document.write(`
-
-// <!doctype html>
-
-// <html>
-
-// <head>
-
-// <meta charset="UTF-8" />
-
-// <title>
-//   ${type} ${doc.dcNumber || ''}
-// </title>
-
-
-// <style>
-
-// @page {
-//   size: A4;
-//   margin: 0;
-// }
-
-
-// * {
-//   box-sizing: border-box;
-// }
-
-
-// html,
-// body {
-
-//   margin: 0;
-//   padding: 0;
-
-//   width: 210mm;
-
-//   min-height: 297mm;
-
-// }
-
-
-// body {
-
-//   font-family:
-//     Arial,
-//     Helvetica,
-//     sans-serif;
-
-//   color: #111;
-
-//   background: #fff;
-
-// }
-
-
-// .dc-sheet {
-
-//   width: 210mm;
-
-//   min-height: 297mm;
-
-//   padding:
-//     10mm
-//     8mm
-//     10mm
-//     8mm;
-
-//   margin: 0;
-
-//   background: #fff;
-
-//   position: relative;
-
-// }
-
-
-// .dc-title {
-
-//   text-align: center;
-
-//   font-size: 18px;
-
-//   line-height: 1;
-
-//   font-weight: 700;
-
-//   text-decoration: underline;
-
-//   margin:
-//     0
-//     0
-//     3mm
-//     0;
-
-// }
-
-
-// .dc-logo {
-
-//   width: 28mm;
-
-//   height: auto;
-
-//   object-fit: contain;
-
-//   display: block;
-
-//   margin:
-//     0
-//     0
-//     2mm
-//     0;
-
-// }
-
-
-// .dc-header {
-
-//   display: grid;
-
-//   grid-template-columns:
-//     43%
-//     57%;
-
-//   column-gap: 4mm;
-
-//   align-items: start;
-
-// }
-
-
-// .dc-left {
-
-//   font-size: 11px;
-
-//   line-height: 1.4;
-
-// }
-
-
-// .dc-label {
-
-//   font-weight: 700;
-
-//   text-decoration: underline;
-
-//   margin-bottom: 1mm;
-
-// }
-
-
-// .dc-company-name {
-
-//   font-weight: 600;
-
-//   margin: 0;
-
-//   line-height: 1.3;
-
-// }
-
-
-// .dc-address {
-
-//   white-space: pre-line;
-
-//   margin: 0;
-
-//   padding: 0;
-
-//   line-height: 1.35;
-
-// }
-
-
-// .dc-email {
-
-//   margin-top: 0.5mm;
-
-//   color: #0563c1;
-
-//   text-decoration: underline;
-
-// }
-
-
-// .dc-delivery-to {
-
-//   margin-top: 3.5mm;
-
-// }
-
-
-// .dc-delivery-to-name {
-
-//   font-weight: 600;
-
-// }
-
-
-// .dc-info-box {
-
-//   width: 100%;
-
-//   border:
-//     0.6px
-//     solid
-//     #b8b8b8;
-
-//   margin: 0;
-
-// }
-
-
-// .dc-info-row {
-
-//   display: grid;
-
-//   grid-template-columns:
-//     50%
-//     50%;
-
-//   min-height: 8mm;
-
-// }
-
-
-// .dc-info-cell {
-
-//   border:
-//     0.6px
-//     solid
-//     #b8b8b8;
-
-//   display: flex;
-
-//   align-items: center;
-
-//   padding:
-//     1.5mm
-//     2mm;
-
-//   font-size: 10.5px;
-
-// }
-
-
-// .dc-info-label {
-
-//   font-weight: 600;
-
-//   text-align: right;
-
-//   justify-content: flex-end;
-
-//   padding-right: 3mm;
-
-// }
-
-
-// .dc-info-value {
-
-//   font-weight: 600;
-
-//   justify-content: flex-start;
-
-//   padding-left: 3mm;
-
-// }
-
-
-// .dc-products {
-
-//   margin-top: 55mm;
-
-//   width: 100%;
-
-// }
-
-
-// .dc-product-table {
-
-//   width: 100%;
-
-//   border-collapse: collapse;
-
-//   table-layout: fixed;
-
-//   margin: 0;
-
-// }
-
-
-// .dc-product-table col:nth-child(1) {
-//   width: 9%;
-// }
-
-
-// .dc-product-table col:nth-child(2) {
-//   width: 30%;
-// }
-
-
-// .dc-product-table col:nth-child(3) {
-//   width: 14%;
-// }
-
-
-// .dc-product-table col:nth-child(4) {
-//   width: 25%;
-// }
-
-
-// .dc-product-table col:nth-child(5) {
-//   width: 22%;
-// }
-
-
-// .dc-product-table th,
-// .dc-product-table td {
-
-//   border:
-//     0.6px
-//     solid
-//     #b8b8b8;
-
-//   padding:
-//     1.8mm
-//     2mm;
-
-//   font-size: 10.5px;
-
-//   vertical-align: top;
-
-// }
-
-
-// .dc-product-table th {
-
-//   font-weight: 700;
-
-//   text-align: center;
-
-//   vertical-align: middle;
-
-// }
-
-
-// .dc-product-table td {
-
-//   text-align: center;
-
-// }
-
-
-// .dc-product-name {
-
-//   text-align: center !important;
-
-//   font-weight: 500;
-
-//   vertical-align: top !important;
-
-// }
-
-
-// .dc-multi-line {
-
-//   min-height: 5mm;
-
-//   line-height: 1.4;
-
-//   text-align: center;
-
-// }
-
-
-// .dc-signatures {
-
-//   margin-top: 18mm;
-
-//   width: 100%;
-
-//   font-size: 11px;
-
-// }
-
-
-// .dc-signature-top {
-
-//   display: grid;
-
-//   grid-template-columns:
-//     1fr
-//     1fr;
-
-//   column-gap: 20mm;
-
-//   margin-bottom: 7mm;
-
-// }
-
-
-// .dc-signature-heading {
-
-//   font-weight: 500;
-
-//   white-space: nowrap;
-
-// }
-
-
-// .dc-signature-heading.right {
-
-//   text-align: right;
-
-// }
-
-
-// .dc-signature-bottom {
-
-//   display: grid;
-
-//   grid-template-columns:
-//     1fr
-//     1fr;
-
-//   column-gap: 30mm;
-
-// }
-
-
-// .dc-signature-block {
-
-//   min-height: 25mm;
-
-//   position: relative;
-
-// }
-
-
-// .dc-signature-name {
-
-//   font-size: 11px;
-
-//   margin-bottom: 2mm;
-
-// }
-
-
-// .dc-signature-line {
-
-//   width: 72mm;
-
-//   border-bottom:
-//     0.7px
-//     solid
-//     #333;
-
-// }
-
-
-// .dc-signature-line.right {
-
-//   margin-left: auto;
-
-// }
-
-
-// @media print {
-
-//   html,
-//   body {
-
-//     width: 210mm;
-
-//     min-height: 297mm;
-
-//     margin: 0;
-
-//     padding: 0;
-
-//     background: #fff;
-
-//   }
-
-
-//   .dc-sheet {
-
-//     width: 210mm;
-
-//     min-height: 297mm;
-
-//     margin: 0;
-
-//     padding:
-//       10mm
-//       8mm
-//       10mm
-//       8mm;
-
-//     page-break-after: avoid;
-
-//   }
-
-// }
-
-// </style>
-
-// </head>
-
-
-// <body>
-
-// ${content}
-
-// </body>
-
-// </html>
-
-// `)
-
-
-//     win.document.close()
-
-
-//     setTimeout(() => {
-
-//       win.focus()
-
-//       win.print()
-
-//     }, 500)
-
-//   }
-
-
-//   /* ============================================================
-//      GET MAC
-//      ============================================================ */
-
-//   function getMacLines(item) {
-
-//     if (!item)
-//       return []
-
-
-//     if (Array.isArray(item.mac))
-//       return item.mac
-
-
-//     if (
-//       typeof item.mac === 'string' &&
-//       item.mac.includes(',')
-//     ) {
-
-//       return item.mac
-//         .split(',')
-//         .map(x => x.trim())
-//         .filter(Boolean)
-
-//     }
-
-
-//     return item.mac
-//       ? [item.mac]
-//       : []
-
-//   }
-
-
-//   /* ============================================================
-//      GET SERIAL
-//      ============================================================ */
-
-//   function getSerialLines(item) {
-
-//     if (!item)
-//       return []
-
-
-//     if (Array.isArray(item.serial))
-//       return item.serial
-
-
-//     if (
-//       typeof item.serial === 'string' &&
-//       item.serial.includes(',')
-//     ) {
-
-//       return item.serial
-//         .split(',')
-//         .map(x => x.trim())
-//         .filter(Boolean)
-
-//     }
-
-
-//     return item.serial
-//       ? [item.serial]
-//       : []
-
-//   }
-
-
-//   /* ============================================================
-//      GROUP SAME PRODUCT
-//      ============================================================ */
-
-//   const groupedItems =
-//     useMemo(() => {
-
-//       const groups = []
-
-//       const map =
-//         new Map()
-
-
-//       for (
-//         const item
-//         of (
-//           Array.isArray(doc.items)
-//             ? doc.items
-//             : []
-//         )
-//       ) {
-
-//         const key =
-//           `${item.category || ''}__${item.name || ''}`
-//             .toLowerCase()
-//             .trim()
-
-
-//         if (!map.has(key)) {
-
-//           const newGroup = {
-
-//             stockId:
-//               item.stockId || '',
-
-//             name:
-//               item.name || '',
-
-//             category:
-//               item.category || '',
-
-//             qty:
-//               0,
-
-//             macLines: [],
-
-//             serialLines: []
-
-//           }
-
-
-//           map.set(
-//             key,
-//             newGroup
-//           )
-
-//           groups.push(
-//             newGroup
-//           )
-
-//         }
-
-
-//         const group =
-//           map.get(key)
-
-
-//         group.qty +=
-//           Number(item.qty) || 0
-
-
-//         const macs =
-//           getMacLines(item)
-
-
-//         macs.forEach(
-//           (mac) => {
-
-//             if (mac)
-//               group.macLines.push(mac)
-
-//           }
-//         )
-
-
-//         const serials =
-//           getSerialLines(item)
-
-
-//         serials.forEach(
-//           (serial) => {
-
-//             if (serial)
-//               group.serialLines.push(
-//                 serial
-//               )
-
-//           }
-//         )
-
-//       }
-
-
-//       return groups
-
-//     }, [doc.items])
-
-
-//   /* ============================================================
-//      PRINTABLE ITEMS
-//      ============================================================ */
-
-//   const printableItems =
-//     groupedItems.length > 0
-//       ? groupedItems
-//       : [
-//           {
-//             name: '',
-//             qty: '',
-//             macLines: [],
-//             serialLines: []
-//           }
-//         ]
-
-
-//   const companyName =
-//     doc.companyName ||
-//     COMPANY_NAME
-
-
-//   const companyAddress =
-//     COMPANY_ADDRESS
-
-
-//   const companyEmail =
-//     COMPANY_EMAIL
-
-
-//   const customerName =
-//     doc.customer?.name || ''
-
-
-//   const customerCompany =
-//     doc.customer?.company || ''
-
-
-//   const customerAddress =
-//     doc.customer?.address || ''
-
-
-//   const customerPhone =
-//     doc.customer?.phone || ''
-
-
-//   return (
-
-//     <Modal
-//       title={`${type} — ${doc.dcNumber || ''}`}
-//       onClose={onClose}
-//       wide
-//     >
-
-
-//       {/* BUTTONS */}
-
-//       <div className="flex gap-3 mb-4 no-print">
-
-//         <button
-//           onClick={handlePrint}
-//           className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-ink text-white text-sm font-medium py-2.5 hover:bg-inkSoft"
-//         >
-
-//           <Printer size={16} />
-
-//           Print / Save as PDF
-
-//         </button>
-
-
-//         <button
-//           onClick={onClose}
-//           className="px-5 rounded-lg border border-line text-ink text-sm font-medium py-2.5 hover:bg-paper"
-//         >
-
-//           Close
-
-//         </button>
-
-//       </div>
-
-
-//       {/* PRINT CONTENT */}
-
-//       <div
-//         ref={printRef}
-//         style={{
-//           background: '#ffffff',
-//           padding: '0',
-//           overflow: 'hidden',
-//           width: '210mm',
-//           margin: '0 auto'
-//         }}
-//       >
-
-//         <div
-//           className="dc-sheet"
-//           style={{
-//             width: '210mm',
-//             minHeight: '297mm',
-//             margin: '0 auto',
-//             background: '#ffffff',
-//             padding: '10mm 8mm 10mm 8mm',
-//             boxSizing: 'border-box',
-//             color: '#111',
-//             fontFamily:
-//               'Arial, Helvetica, sans-serif',
-//             overflow: 'hidden'
-//           }}
-//         >
-
-
-//           {/* TITLE */}
-
-//           <div
-//             className="dc-title"
-//             style={{
-//               textAlign: 'center',
-//               fontSize: '18px',
-//               lineHeight: '1',
-//               fontWeight: 700,
-//               textDecoration: 'underline',
-//               margin: '0 0 3mm 0'
-//             }}
-//           >
-
-//             DELIVERY CHALLAN
-
-//           </div>
-
-
-//           {/* LOGO */}
-
-//           <img
-//             src={COMPANY_LOGO}
-//             alt="Pearl Networks"
-//             className="dc-logo"
-//             style={{
-//               width: '28mm',
-//               height: 'auto',
-//               objectFit: 'contain',
-//               display: 'block',
-//               margin: '0 0 -3mm 0'
-//             }}
-//           />
-
-
-//           {/* HEADER */}
-
-//           <div
-//             className="dc-header"
-//             style={{
-//               display: 'grid',
-//               gridTemplateColumns:
-//                 '43% 57%',
-//               columnGap: '4mm',
-//               alignItems: 'start'
-//             }}
-//           >
-
-
-//             {/* LEFT */}
-
-//             <div
-//               className="dc-left"
-//               style={{
-//                 fontSize: '11px',
-//                 lineHeight: 1.4
-//               }}
-//             >
-
-//               <div
-//                 className="dc-address"
-//                 style={{
-//                   whiteSpace:
-//                     'pre-line',
-//                   margin: 0,
-//                   padding: 0,
-//                   lineHeight: 1.35
-//                 }}
-//               >
-
-//                 {companyAddress}
-
-//               </div>
-
-
-//               <div
-//                 className="dc-email"
-//                 style={{
-//                   marginTop:
-//                     '0.5mm',
-//                   color:
-//                     '#0563c1',
-//                   textDecoration:
-//                     'underline'
-//                 }}
-//               >
-
-//                 {companyEmail}
-
-//               </div>
-
-
-//               {/* DELIVERY TO */}
-
-//               <div
-//                 className="dc-delivery-to"
-//                 style={{
-//                   marginTop:
-//                     '15.5mm'
-//                 }}
-//               >
-
-//                 <div
-//                   className="dc-label"
-//                   style={{
-//                     fontWeight: 700,
-//                     textDecoration:
-//                       'underline'
-//                   }}
-//                 >
-
-//                   Delivery To:
-
-//                 </div>
-
-
-//                 <div
-//                   className="dc-delivery-to-name"
-//                   style={{
-//                     fontWeight: 600
-//                   }}
-//                 >
-
-//                   {customerCompany
-//                     ? `M/S. ${customerCompany}`
-//                     : `M/S. ${customerName}`}
-
-//                 </div>
-
-
-//                 {!customerCompany &&
-//                   customerName && (
-
-//                     <div>
-//                       {customerName}
-//                     </div>
-
-//                   )}
-
-
-//                 {customerAddress && (
-
-//                   <div
-//                     style={{
-//                       marginTop:
-//                         '1mm',
-//                       fontSize:
-//                         '10px'
-//                     }}
-//                   >
-
-//                     {customerAddress}
-
-//                   </div>
-
-//                 )}
-
-
-//                 {customerPhone && (
-
-//                   <div
-//                     style={{
-//                       fontSize:
-//                         '10px'
-//                     }}
-//                   >
-
-//                     Phone:
-//                     {' '}
-//                     {customerPhone}
-
-//                   </div>
-
-//                 )}
-
-//               </div>
-
-//             </div>
-
-
-//             {/* RIGHT INFO BOX */}
-
-//             <div>
-
-//               <div
-//                 className="dc-info-box"
-//                 style={{
-//                   width: '100%',
-//                   border:
-//                     '0.6px solid #b8b8b8',
-//                   margin: 0
-//                 }}
-//               >
-
-//                 <div
-//                   className="dc-info-row"
-//                   style={{
-//                     display: 'grid',
-//                     gridTemplateColumns:
-//                       '50% 50%',
-//                     minHeight: '8mm'
-//                   }}
-//                 >
-
-//                   <div
-//                     className="dc-info-cell dc-info-label"
-//                     style={{
-//                       border:
-//                         '0.6px solid #b8b8b8',
-//                       display:
-//                         'flex',
-//                       alignItems:
-//                         'center',
-//                       justifyContent:
-//                         'flex-end',
-//                       padding:
-//                         '1.5mm 3mm',
-//                       fontSize:
-//                         '10.5px',
-//                       fontWeight: 600
-//                     }}
-//                   >
-
-//                     Delivery Challan No:
-
-//                   </div>
-
-
-//                   <div
-//                     className="dc-info-cell dc-info-value"
-//                     style={{
-//                       border:
-//                         '0.6px solid #b8b8b8',
-//                       display:
-//                         'flex',
-//                       alignItems:
-//                         'center',
-//                       justifyContent:
-//                         'flex-start',
-//                       padding:
-//                         '1.5mm 3mm',
-//                       fontSize:
-//                         '10.5px',
-//                       fontWeight: 600
-//                     }}
-//                   >
-
-//                     {doc.dcNumber}
-
-//                   </div>
-
-//                 </div>
-
-
-//                 <div
-//                   className="dc-info-row"
-//                   style={{
-//                     display: 'grid',
-//                     gridTemplateColumns:
-//                       '50% 50%',
-//                     minHeight: '8mm'
-//                   }}
-//                 >
-
-//                   <div
-//                     className="dc-info-cell dc-info-label"
-//                     style={{
-//                       border:
-//                         '0.6px solid #b8b8b8',
-//                       display:
-//                         'flex',
-//                       alignItems:
-//                         'center',
-//                       justifyContent:
-//                         'flex-end',
-//                       padding:
-//                         '1.5mm 3mm',
-//                       fontSize:
-//                         '10.5px',
-//                       fontWeight: 600
-//                     }}
-//                   >
-
-//                     Date:
-
-//                   </div>
-
-
-//                   <div
-//                     className="dc-info-cell dc-info-value"
-//                     style={{
-//                       border:
-//                         '0.6px solid #b8b8b8',
-//                       display:
-//                         'flex',
-//                       alignItems:
-//                         'center',
-//                       justifyContent:
-//                         'flex-start',
-//                       padding:
-//                         '1.5mm 3mm',
-//                       fontSize:
-//                         '10.5px',
-//                       fontWeight: 600
-//                     }}
-//                   >
-
-//                     {formatDate(doc.date)}
-
-//                   </div>
-
-//                 </div>
-
-//               </div>
-
-//             </div>
-
-//           </div>
-
-
-//           {/* PRODUCT TABLE */}
-
-//           <div
-//             className="dc-products"
-//             style={{
-//               marginTop: '5mm',
-//               width: '100%'
-//             }}
-//           >
-
-//             <table
-//               className="dc-product-table"
-//               style={{
-//                 width: '100%',
-//                 borderCollapse:
-//                   'collapse',
-//                 tableLayout:
-//                   'fixed',
-//                 margin: 0
-//               }}
-//             >
-
-//               <colgroup>
-
-//                 <col
-//                   style={{
-//                     width: '9%'
-//                   }}
-//                 />
-
-//                 <col
-//                   style={{
-//                     width: '30%'
-//                   }}
-//                 />
-
-//                 <col
-//                   style={{
-//                     width: '14%'
-//                   }}
-//                 />
-
-//                 <col
-//                   style={{
-//                     width: '25%'
-//                   }}
-//                 />
-
-//                 <col
-//                   style={{
-//                     width: '22%'
-//                   }}
-//                 />
-
-//               </colgroup>
-
-
-//               <thead>
-
-//                 <tr>
-
-//                   <th
-//                     style={{
-//                       border:
-//                         '0.6px solid #b8b8b8',
-//                       padding:
-//                         '1.8mm 2mm',
-//                       fontSize:
-//                         '10.5px',
-//                       textAlign:
-//                         'center',
-//                       fontWeight: 700
-//                     }}
-//                   >
-//                     S.No.
-//                   </th>
-
-
-//                   <th
-//                     style={{
-//                       border:
-//                         '0.6px solid #b8b8b8',
-//                       padding:
-//                         '1.8mm 2mm',
-//                       fontSize:
-//                         '10.5px',
-//                       textAlign:
-//                         'center',
-//                       fontWeight: 700
-//                     }}
-//                   >
-//                     Product Name
-//                   </th>
-
-
-//                   <th
-//                     style={{
-//                       border:
-//                         '0.6px solid #b8b8b8',
-//                       padding:
-//                         '1.8mm 2mm',
-//                       fontSize:
-//                         '10.5px',
-//                       textAlign:
-//                         'center',
-//                       fontWeight: 700
-//                     }}
-//                   >
-//                     Quantity
-//                   </th>
-
-
-//                   <th
-//                     style={{
-//                       border:
-//                         '0.6px solid #b8b8b8',
-//                       padding:
-//                         '1.8mm 2mm',
-//                       fontSize:
-//                         '10.5px',
-//                       textAlign:
-//                         'center',
-//                       fontWeight: 700
-//                     }}
-//                   >
-//                     Mac Address
-//                   </th>
-
-
-//                   <th
-//                     style={{
-//                       border:
-//                         '0.6px solid #b8b8b8',
-//                       padding:
-//                         '1.8mm 2mm',
-//                       fontSize:
-//                         '10.5px',
-//                       textAlign:
-//                         'center',
-//                       fontWeight: 700
-//                     }}
-//                   >
-//                     Serial Number
-//                   </th>
-
-//                 </tr>
-
-//               </thead>
-
-
-//               <tbody>
-
-//                 {printableItems.map(
-//                   (item, index) => {
-
-//                     const macLines =
-//                       item.macLines ||
-//                       []
-
-
-//                     const serialLines =
-//                       item.serialLines ||
-//                       []
-
-
-//                     const maxLines =
-//                       Math.max(
-//                         1,
-//                         macLines.length,
-//                         serialLines.length
-//                       )
-
-
-//                     return (
-
-//                       <tr
-//                         key={`${item.name}-${index}`}
-//                       >
-
-//                         <td
-//                           style={{
-//                             border:
-//                               '0.6px solid #b8b8b8',
-//                             padding:
-//                               '1.8mm 2mm',
-//                             fontSize:
-//                               '10.5px',
-//                             textAlign:
-//                               'center',
-//                             verticalAlign:
-//                               'top'
-//                           }}
-//                         >
-
-//                           {index + 1}
-
-//                         </td>
-
-
-//                         <td
-//                           className="dc-product-name"
-//                           style={{
-//                             border:
-//                               '0.6px solid #b8b8b8',
-//                             padding:
-//                               '1.8mm 2mm',
-//                             fontSize:
-//                               '10.5px',
-//                             textAlign:
-//                               'center',
-//                             verticalAlign:
-//                               'top',
-//                             fontWeight: 500
-//                           }}
-//                         >
-
-//                           {item.name}
-
-//                         </td>
-
-
-//                         <td
-//                           style={{
-//                             border:
-//                               '0.6px solid #b8b8b8',
-//                             padding:
-//                               '1.8mm 2mm',
-//                             fontSize:
-//                               '10.5px',
-//                             textAlign:
-//                               'center',
-//                             verticalAlign:
-//                               'top'
-//                           }}
-//                         >
-
-//                           {item.qty}
-
-//                         </td>
-
-
-//                         <td
-//                           style={{
-//                             border:
-//                               '0.6px solid #b8b8b8',
-//                             padding:
-//                               '1.8mm 2mm',
-//                             fontSize:
-//                               '10.5px',
-//                             textAlign:
-//                               'center',
-//                             verticalAlign:
-//                               'top'
-//                           }}
-//                         >
-
-//                           {Array.from({
-//                             length:
-//                               maxLines
-//                           }).map(
-//                             (_, macIndex) => (
-
-//                               <div
-//                                 key={`mac-${macIndex}`}
-//                                 className="dc-multi-line"
-//                               >
-
-//                                 {macLines[
-//                                   macIndex
-//                                 ] || ''}
-
-//                               </div>
-
-//                             )
-//                           )}
-
-//                         </td>
-
-
-//                         <td
-//                           style={{
-//                             border:
-//                               '0.6px solid #b8b8b8',
-//                             padding:
-//                               '1.8mm 2mm',
-//                             fontSize:
-//                               '10.5px',
-//                             textAlign:
-//                               'center',
-//                             verticalAlign:
-//                               'top'
-//                           }}
-//                         >
-
-//                           {Array.from({
-//                             length:
-//                               maxLines
-//                           }).map(
-//                             (_, serialIndex) => (
-
-//                               <div
-//                                 key={`serial-${serialIndex}`}
-//                                 className="dc-multi-line"
-//                               >
-
-//                                 {serialLines[
-//                                   serialIndex
-//                                 ] || ''}
-
-//                               </div>
-
-//                             )
-//                           )}
-
-//                         </td>
-
-//                       </tr>
-
-//                     )
-
-//                   }
-//                 )}
-
-//               </tbody>
-
-//             </table>
-
-//           </div>
-
-
-//           {/* SIGNATURES */}
-
-//           <div
-//             className="dc-signatures"
-//             style={{
-//               marginTop: '18mm',
-//               width: '100%',
-//               fontSize: '11px'
-//             }}
-//           >
-
-//             <div
-//               className="dc-signature-top"
-//               style={{
-//                 display: 'grid',
-//                 gridTemplateColumns:
-//                   '1fr 1fr',
-//                 columnGap: '20mm',
-//                 marginBottom: '7mm'
-//               }}
-//             >
-
-//               <div
-//                 className="dc-signature-heading"
-//                 style={{
-//                   fontWeight: 500,
-//                   whiteSpace:
-//                     'nowrap'
-//                 }}
-//               >
-
-//                 Received In Sound Condition By:
-
-//               </div>
-
-
-//               <div
-//                 className="dc-signature-heading right"
-//                 style={{
-//                   fontWeight: 500,
-//                   whiteSpace:
-//                     'nowrap',
-//                   textAlign: 'right'
-//                 }}
-//               >
-
-//                 Delivered By:
-
-//               </div>
-
-//             </div>
-
-
-//             <div
-//               className="dc-signature-bottom"
-//               style={{
-//                 display: 'grid',
-//                 gridTemplateColumns:
-//                   '1fr 1fr',
-//                 columnGap: '30mm'
-//               }}
-//             >
-
-//               <div
-//                 className="dc-signature-block"
-//                 style={{
-//                   minHeight:
-//                     '25mm'
-//                 }}
-//               >
-
-//                 <div
-//                   className="dc-signature-name"
-//                   style={{
-//                     fontSize:
-//                       '11px',
-//                     marginBottom:
-//                       '2mm'
-//                   }}
-//                 >
-
-//                   Name:
-
-//                 </div>
-
-
-//                 <div
-//                   className="dc-signature-line"
-//                   style={{
-//                     width: '72mm',
-//                     borderBottom:
-//                       '0.7px solid #333'
-//                   }}
-//                 />
-
-
-//                 <div
-//                   style={{
-//                     marginTop:
-//                       '4mm',
-//                     fontSize:
-//                       '10px',
-//                     color: '#666'
-//                   }}
-//                 >
-
-//                   Signature
-
-//                 </div>
-
-//               </div>
-
-
-//               <div
-//                 className="dc-signature-block"
-//                 style={{
-//                   minHeight:
-//                     '25mm'
-//                 }}
-//               >
-
-//                 <div
-//                   className="dc-signature-line right"
-//                   style={{
-//                     width: '72mm',
-//                     borderBottom:
-//                       '0.7px solid #333',
-//                     marginLeft:
-//                       'auto'
-//                   }}
-//                 />
-
-
-//                 <div
-//                   style={{
-//                     marginTop:
-//                       '4mm',
-//                     fontSize:
-//                       '10px',
-//                     color: '#666',
-//                     textAlign:
-//                       'right'
-//                   }}
-//                 >
-
-//                   Signature
-
-//                 </div>
-
-//               </div>
-
-//             </div>
-
-//           </div>
-
-//         </div>
-
-//       </div>
-
-
-//       {/* PRINT CSS */}
-
-//       <style
-//         dangerouslySetInnerHTML={{
-//           __html: `
-
-// @media print {
-
-//   .no-print {
-//     display: none !important;
-//   }
-
-//   .dc-sheet {
-//     box-shadow: none !important;
-//   }
-
-//   body {
-//     background: #fff !important;
-//   }
-
-// }
-
-// `
-//         }}
-//       />
-
-//     </Modal>
-
-//   )
-
-// }
-
-
-
-
-
-
-
 //wihout customer select input
 
 
@@ -25925,6 +22131,8871 @@
 
 
 
+// import { useEffect, useMemo, useState, useRef } from 'react'
+// import { ref, push, onValue, update, get, set } from 'firebase/database'
+// import {
+//   Plus,
+//   Trash2,
+//   FileText,
+//   Printer,
+//   Pencil,
+//   Download,
+//   Search,
+//   X,
+//   ArrowUpDown
+// } from 'lucide-react'
+
+// import { db } from '../firebase'
+// import { useAuth } from '../context/AuthContext'
+// import {
+//   formatDate,
+//   todayISO
+// } from '../utils/helpers'
+
+// import { Modal } from './Customers'
+// import Loader from '../components/Loader'
+
+// /* ============================================================
+//    FALLBACK COMPANY INFORMATION
+//    ============================================================
+//    Ye sirf fallback hain — agar kisi company ne apna logo,
+//    address, ya email set nahi kiya to ye use honge.
+//    ============================================================ */
+
+// const FALLBACK_COMPANY_NAME = 'Pearl Networks'
+// const FALLBACK_COMPANY_LOGO = '/PN.png'
+
+// const FALLBACK_COMPANY_ADDRESS = `
+// KCHS, Gohar Chamber, Office # 304,
+// Shahrah-e-Faisal, near Duty Free Shop,
+// Karachi, 75660
+// `
+
+// const FALLBACK_COMPANY_EMAIL = 'info@globalonesystem.com'
+// const FALLBACK_COMPANY_PHONE = ''
+
+// /* ============================================================
+//    DC NUMBER
+//    ============================================================ */
+
+// function getTodayDateString() {
+//   const today = new Date()
+
+//   const year = today.getFullYear()
+//   const month = String(today.getMonth() + 1).padStart(2, '0')
+//   const day = String(today.getDate()).padStart(2, '0')
+
+//   return `${year}${month}${day}`
+// }
+
+// async function getNextDcNumber(companyId) {
+//   try {
+//     const dateStr = getTodayDateString()
+
+//     const counterRef = ref(
+//       db,
+//       `companies/${companyId}/counters/dc`
+//     )
+
+//     const snapshot = await get(counterRef)
+
+//     let lastNumber = 0
+//     let lastDate = ''
+
+//     if (snapshot.exists()) {
+//       const data = snapshot.val()
+
+//       lastNumber = data.number || 0
+//       lastDate = data.date || ''
+//     }
+
+//     let nextNumber = lastNumber + 1
+
+//     if (lastDate !== dateStr) {
+//       nextNumber = 1
+//     }
+
+//     const padded = String(nextNumber).padStart(4, '0')
+
+//     return `DC-${dateStr}-${padded}`
+//   } catch (error) {
+//     console.error(
+//       'Error getting DC number:',
+//       error
+//     )
+
+//     const dateStr = getTodayDateString()
+
+//     const timestamp =
+//       Date.now()
+//         .toString()
+//         .slice(-6)
+
+//     return `DC-${dateStr}-${timestamp}`
+//   }
+// }
+
+// async function incrementDcCounter(companyId) {
+//   try {
+//     const dateStr = getTodayDateString()
+
+//     const counterRef = ref(
+//       db,
+//       `companies/${companyId}/counters/dc`
+//     )
+
+//     const snapshot = await get(counterRef)
+
+//     let lastNumber = 0
+//     let lastDate = ''
+
+//     if (snapshot.exists()) {
+//       const data = snapshot.val()
+
+//       lastNumber = data.number || 0
+//       lastDate = data.date || ''
+//     }
+
+//     let newNumber = lastNumber + 1
+
+//     if (lastDate !== dateStr) {
+//       newNumber = 1
+//     }
+
+//     await set(counterRef, {
+//       date: dateStr,
+//       number: newNumber
+//     })
+
+//     return {
+//       number: newNumber,
+//       date: dateStr
+//     }
+//   } catch (error) {
+//     console.error(
+//       'Error incrementing counter:',
+//       error
+//     )
+
+//     return null
+//   }
+// }
+
+// /* ============================================================
+//    CHECK IF DC NUMBER EXISTS (Not Deleted)
+//    ============================================================ */
+
+// async function checkDcNumberExists(companyId, dcNumber, excludeId = null) {
+//   try {
+//     const challansRef = ref(
+//       db,
+//       `companies/${companyId}/challans`
+//     )
+
+//     const snapshot = await get(challansRef)
+
+//     if (!snapshot.exists()) {
+//       return false
+//     }
+
+//     const challans = snapshot.val()
+
+//     for (const [id, challan] of Object.entries(challans)) {
+//       if (excludeId && id === excludeId) {
+//         continue
+//       }
+
+//       if (challan.dcNumber === dcNumber) {
+//         return true
+//       }
+//     }
+
+//     return false
+//   } catch (error) {
+//     console.error('Error checking DC number:', error)
+//     return false
+//   }
+// }
+
+// /* ============================================================
+//    EMPTY ITEM
+//    ============================================================ */
+
+// const emptyItem = {
+//   stockId: '',
+//   name: '',
+//   category: '',
+//   mac: '',
+//   serial: '',
+//   qty: 1,
+//   available: 0
+// }
+
+// /* ============================================================
+//    MAIN DELIVERY CHALLAN
+//    ============================================================ */
+
+// export default function DeliveryChallan() {
+//   const { companyId, company } = useAuth()
+
+//   /* ============================================================
+//      DYNAMIC COMPANY INFO (with fallback)
+//      ============================================================ */
+
+//   const companyName =
+//     company?.name ||
+//     FALLBACK_COMPANY_NAME
+
+//   const companyLogo =
+//     company?.logoUrl ||
+//     FALLBACK_COMPANY_LOGO
+
+//   const companyAddress =
+//     company?.address ||
+//     FALLBACK_COMPANY_ADDRESS
+
+//   const companyEmail =
+//     company?.email ||
+//     FALLBACK_COMPANY_EMAIL
+
+//   const companyPhone =
+//     company?.phone ||
+//     FALLBACK_COMPANY_PHONE
+
+//   const [customers, setCustomers] = useState(null)
+//   const [stock, setStock] = useState(null)
+//   const [challans, setChallans] = useState(null)
+
+//   const [showForm, setShowForm] = useState(false)
+//   const [preview, setPreview] = useState(null)
+//   const [editingChallan, setEditingChallan] = useState(null)
+
+//   const [customerId, setCustomerId] = useState('')
+
+//   const [customerSearch, setCustomerSearch] = useState('')
+//   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
+
+//   const [dcNumber, setDcNumber] = useState('')
+//   const [dcDate, setDcDate] = useState(todayISO())
+
+//   const [items, setItems] = useState([])
+
+//   const [stockSearch, setStockSearch] = useState('')
+//   const [selectedStockIds, setSelectedStockIds] = useState([])
+
+//   const [pickQty, setPickQty] = useState(1)
+
+//   const [saving, setSaving] = useState(false)
+//   const [error, setError] = useState('')
+//   const [dcNumberError, setDcNumberError] = useState('')
+
+//   const [searchTerm, setSearchTerm] = useState('')
+
+//   const [sortBy, setSortBy] = useState('date-desc')
+
+//   /* ============================================================
+//      LOAD DATA
+//      ============================================================ */
+
+//   useEffect(() => {
+//     if (!companyId) return
+
+//     const customersRef = ref(
+//       db,
+//       `companies/${companyId}/customers`
+//     )
+
+//     const stockRef = ref(
+//       db,
+//       `companies/${companyId}/stock`
+//     )
+
+//     const challansRef = ref(
+//       db,
+//       `companies/${companyId}/challans`
+//     )
+
+//     const unsubCustomers = onValue(
+//       customersRef,
+//       (snap) => {
+//         const value = snap.val() || {}
+
+//         const list = Object.entries(value).map(
+//           ([id, customer]) => ({
+//             id,
+//             ...customer
+//           })
+//         )
+
+//         setCustomers(list)
+//       },
+//       (err) => {
+//         console.error(
+//           'customers read failed:',
+//           err
+//         )
+
+//         setCustomers([])
+//       }
+//     )
+
+//     const unsubStock = onValue(
+//       stockRef,
+//       (snap) => {
+//         const value = snap.val() || {}
+
+//         const list = Object.entries(value).map(
+//           ([id, stockItem]) => ({
+//             id,
+//             ...stockItem
+//           })
+//         )
+
+//         setStock(list)
+//       },
+//       (err) => {
+//         console.error(
+//           'stock read failed:',
+//           err
+//         )
+
+//         setStock([])
+//       }
+//     )
+
+//     const unsubChallans = onValue(
+//       challansRef,
+//       (snap) => {
+//         const value = snap.val() || {}
+
+//         const list = Object.entries(value)
+//           .map(
+//             ([id, challan]) => ({
+//               id,
+//               ...challan
+//             })
+//           )
+
+//         setChallans(list)
+//       },
+//       (err) => {
+//         console.error(
+//           'challans read failed:',
+//           err
+//         )
+
+//         setChallans([])
+//       }
+//     )
+
+//     return () => {
+//       unsubCustomers()
+//       unsubStock()
+//       unsubChallans()
+//     }
+//   }, [companyId])
+
+//   /* ============================================================
+//      SET CUSTOMER SEARCH TEXT
+//      ============================================================ */
+
+//   useEffect(() => {
+//     if (!editingChallan) return
+//     if (!customers) return
+
+//     const selectedCustomer =
+//       customers.find(
+//         (c) => c.id === customerId
+//       )
+
+//     if (selectedCustomer) {
+//       setCustomerSearch(
+//         `${selectedCustomer.name || ''}${
+//           selectedCustomer.company
+//             ? ` — ${selectedCustomer.company}`
+//             : ''
+//         }`
+//       )
+//     }
+//   }, [
+//     customers,
+//     customerId,
+//     editingChallan
+//   ])
+
+//   /* ============================================================
+//      FILTERED + SORTED CHALLANS
+//      ============================================================ */
+
+//   const filteredChallans = useMemo(() => {
+//     if (!challans) return []
+
+//     const search = searchTerm.trim().toLowerCase()
+
+//     let result = challans
+
+//     if (search) {
+//       result = challans.filter((challan) => {
+//         if (
+//           challan.dcNumber &&
+//           challan.dcNumber.toLowerCase().includes(search)
+//         ) {
+//           return true
+//         }
+
+//         if (
+//           challan.customerName &&
+//           challan.customerName.toLowerCase().includes(search)
+//         ) {
+//           return true
+//         }
+
+//         if (
+//           challan.customerCompany &&
+//           challan.customerCompany.toLowerCase().includes(search)
+//         ) {
+//           return true
+//         }
+
+//         if (
+//           challan.date &&
+//           formatDate(challan.date).toLowerCase().includes(search)
+//         ) {
+//           return true
+//         }
+
+//         return false
+//       })
+//     }
+
+//     const sorted = [...result]
+
+//     switch (sortBy) {
+//       case 'date-asc':
+//         sorted.sort((a, b) => {
+//           const dateA = new Date(a.date || 0).getTime()
+//           const dateB = new Date(b.date || 0).getTime()
+//           if (dateA !== dateB) return dateA - dateB
+//           return (a.createdAt || 0) - (b.createdAt || 0)
+//         })
+//         break
+
+//       case 'items-desc':
+//         sorted.sort((a, b) => {
+//           const itemsA = a.items?.length || 0
+//           const itemsB = b.items?.length || 0
+//           if (itemsB !== itemsA) return itemsB - itemsA
+//           return (b.createdAt || 0) - (a.createdAt || 0)
+//         })
+//         break
+
+//       case 'items-asc':
+//         sorted.sort((a, b) => {
+//           const itemsA = a.items?.length || 0
+//           const itemsB = b.items?.length || 0
+//           if (itemsA !== itemsB) return itemsA - itemsB
+//           return (b.createdAt || 0) - (a.createdAt || 0)
+//         })
+//         break
+
+//       case 'date-desc':
+//       default:
+//         sorted.sort((a, b) => {
+//           const dateA = new Date(a.date || 0).getTime()
+//           const dateB = new Date(b.date || 0).getTime()
+//           if (dateA !== dateB) return dateB - dateA
+//           return (b.createdAt || 0) - (a.createdAt || 0)
+//         })
+//         break
+//     }
+
+//     return sorted
+//   }, [challans, searchTerm, sortBy])
+
+//   /* ============================================================
+//      VALIDATE DC NUMBER
+//      ============================================================ */
+
+//   const validateDcNumber = async (number) => {
+//     if (!number || number.trim() === '') {
+//       setDcNumberError('DC Number is required')
+//       return false
+//     }
+
+//     const dcPattern = /^DC-\d{8}-\d{4}$/
+//     if (!dcPattern.test(number)) {
+//       setDcNumberError('Invalid format. Use DC-YYYYMMDD-0001')
+//       return false
+//     }
+
+//     setDcNumberError('')
+//     return true
+//   }
+
+//   /* ============================================================
+//      AVAILABLE STOCK
+//      ============================================================ */
+
+//   const availableStock = useMemo(() => {
+//     if (!stock) return []
+
+//     const selectedIds = new Set(
+//       items
+//         .map((item) => item.stockId)
+//         .filter(Boolean)
+//     )
+
+//     return stock.filter((s) => {
+//       if (selectedIds.has(s.id)) {
+//         return false
+//       }
+
+//       const status =
+//         String(s.status || '')
+//           .toLowerCase()
+//           .trim()
+
+//       const stockType =
+//         String(s.stockType || '')
+//           .toLowerCase()
+//           .trim()
+
+//       const type =
+//         String(s.type || '')
+//           .toLowerCase()
+//           .trim()
+
+//       const isDemoProduct =
+//         status === 'demo' ||
+//         stockType === 'demo' ||
+//         type === 'demo' ||
+//         s.demo === true ||
+//         s.isDemo === true ||
+//         s.isDemoProduct === true
+
+//       if (isDemoProduct) {
+//         return false
+//       }
+
+//       if (status === 'sold') {
+//         return false
+//       }
+
+//       const isSerialized =
+//         !!s.mac ||
+//         !!s.serial
+
+//       if (isSerialized) {
+//         return true
+//       }
+
+//       const quantity =
+//         Number(s.quantity) || 0
+
+//       return quantity > 0
+//     })
+//   }, [stock, items])
+
+//   /* ============================================================
+//      SEARCHED STOCK
+//      ============================================================ */
+
+//   const filteredAvailableStock = useMemo(() => {
+//     const search =
+//       stockSearch
+//         .toLowerCase()
+//         .trim()
+
+//     if (!search) {
+//       return availableStock
+//     }
+
+//     return availableStock.filter((s) => {
+//       const name =
+//         String(s.name || '')
+//           .toLowerCase()
+
+//       const category =
+//         String(s.category || '')
+//           .toLowerCase()
+
+//       const mac =
+//         String(s.mac || '')
+//           .toLowerCase()
+
+//       const serial =
+//         String(s.serial || '')
+//           .toLowerCase()
+
+//       return (
+//         name.includes(search) ||
+//         category.includes(search) ||
+//         mac.includes(search) ||
+//         serial.includes(search)
+//       )
+//     })
+//   }, [
+//     availableStock,
+//     stockSearch
+//   ])
+
+//   /* ============================================================
+//      FILTERED CUSTOMERS
+//      ============================================================ */
+
+//   const filteredCustomers = useMemo(() => {
+//     if (!customers) return []
+
+//     const search =
+//       customerSearch
+//         .toLowerCase()
+//         .trim()
+
+//     if (!search) {
+//       return customers
+//     }
+
+//     return customers.filter(
+//       (customer) => {
+//         const name =
+//           String(
+//             customer.name || ''
+//           ).toLowerCase()
+
+//         const companyName =
+//           String(
+//             customer.company || ''
+//           ).toLowerCase()
+
+//         const phone =
+//           String(
+//             customer.phone || ''
+//           ).toLowerCase()
+
+//         const address =
+//           String(
+//             customer.address || ''
+//           ).toLowerCase()
+
+//         return (
+//           name.includes(search) ||
+//           companyName.includes(search) ||
+//           phone.includes(search) ||
+//           address.includes(search)
+//         )
+//       }
+//     )
+//   }, [
+//     customers,
+//     customerSearch
+//   ])
+
+//   /* ============================================================
+//      RESET FORM
+//      ============================================================ */
+
+//   function resetForm() {
+//     setCustomerId('')
+
+//     setCustomerSearch('')
+//     setShowCustomerDropdown(false)
+
+//     setDcNumber('')
+//     setDcDate(todayISO())
+
+//     setItems([])
+
+//     setStockSearch('')
+//     setSelectedStockIds([])
+
+//     setPickQty(1)
+
+//     setError('')
+//     setDcNumberError('')
+//     setEditingChallan(null)
+//   }
+
+//   /* ============================================================
+//      NEW CHALLAN
+//      ============================================================ */
+
+//   const openNewChallan = async () => {
+//     resetForm()
+
+//     setDcDate(todayISO())
+
+//     if (companyId) {
+//       const number =
+//         await getNextDcNumber(
+//           companyId
+//         )
+
+//       setDcNumber(number)
+//     }
+
+//     setShowForm(true)
+//   }
+
+//   /* ============================================================
+//      CUSTOMER SELECT
+//      ============================================================ */
+
+//   function selectCustomer(customer) {
+//     setCustomerId(customer.id)
+
+//     setCustomerSearch(
+//       `${customer.name || ''}${
+//         customer.company
+//           ? ` — ${customer.company}`
+//           : ''
+//       }`
+//     )
+
+//     setShowCustomerDropdown(false)
+
+//     setError('')
+//   }
+
+//   /* ============================================================
+//      CLEAR CUSTOMER
+//      ============================================================ */
+
+//   function clearCustomer() {
+//     if (editingChallan) return
+
+//     setCustomerId('')
+//     setCustomerSearch('')
+//     setShowCustomerDropdown(true)
+//   }
+
+//   /* ============================================================
+//      EDIT CHALLAN
+//      ============================================================ */
+
+//   function openEditChallan(challan) {
+//     setError('')
+//     setDcNumberError('')
+
+//     setEditingChallan(challan)
+
+//     setCustomerId(
+//       challan.customerId || ''
+//     )
+
+//     const editCustomer =
+//       customers?.find(
+//         (c) =>
+//           c.id ===
+//           challan.customerId
+//       )
+
+//     setCustomerSearch(
+//       editCustomer
+//         ? `${editCustomer.name || ''}${
+//             editCustomer.company
+//               ? ` — ${editCustomer.company}`
+//               : ''
+//           }`
+//         : challan.customerName || challan.customerCompany || ''
+//     )
+
+//     setShowCustomerDropdown(false)
+
+//     setDcNumber(
+//       challan.dcNumber || ''
+//     )
+
+//     setDcDate(
+//       challan.date ||
+//       todayISO()
+//     )
+
+//     const oldItems =
+//       Array.isArray(
+//         challan.items
+//       )
+//         ? challan.items.map(
+//             (item) => ({
+//               stockId:
+//                 item.stockId || '',
+
+//               name:
+//                 item.name || '',
+
+//               category:
+//                 item.category || '',
+
+//               mac:
+//                 item.mac || '',
+
+//               serial:
+//                 item.serial || '',
+
+//               qty:
+//                 Number(item.qty) || 1,
+
+//               available:
+//                 Number(
+//                   item.available
+//                 ) || 0
+//             })
+//           )
+//         : []
+
+//     setItems(oldItems)
+
+//     setStockSearch('')
+//     setSelectedStockIds([])
+//     setPickQty(1)
+
+//     setShowForm(true)
+//   }
+
+//   /* ============================================================
+//      DELETE CHALLAN
+//      ============================================================ */
+
+//   async function handleDeleteChallan(id) {
+//     if (
+//       !confirm(
+//         'Are you sure you want to delete this Delivery Challan?'
+//       )
+//     ) {
+//       return
+//     }
+
+//     try {
+//       const challanRef = ref(
+//         db,
+//         `companies/${companyId}/challans/${id}`
+//       )
+
+//       const snap =
+//         await get(challanRef)
+
+//       if (!snap.exists()) {
+//         setError(
+//           'Challan not found'
+//         )
+
+//         return
+//       }
+
+//       const challan =
+//         snap.val()
+
+//       const oldItems =
+//         challan.items || []
+
+//       const updates = {}
+
+//       for (
+//         const item of oldItems
+//       ) {
+//         if (!item.stockId)
+//           continue
+
+//         const stockRef =
+//           ref(
+//             db,
+//             `companies/${companyId}/stock/${item.stockId}`
+//           )
+
+//         const stockSnap =
+//           await get(stockRef)
+
+//         if (
+//           !stockSnap.exists()
+//         ) {
+//           continue
+//         }
+
+//         const stockItem =
+//           stockSnap.val()
+
+//         if (
+//           stockItem.mac ||
+//           stockItem.serial ||
+//           item.mac ||
+//           item.serial
+//         ) {
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/status`
+//           ] = 'available'
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/soldTo`
+//           ] = null
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/soldToId`
+//           ] = null
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/soldDate`
+//           ] = null
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/dcNumber`
+//           ] = null
+//         } else {
+//           const currentQty =
+//             Number(
+//               stockItem.quantity
+//             ) || 0
+
+//           const restoredQty =
+//             currentQty +
+//             (Number(item.qty) || 0)
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/quantity`
+//           ] = restoredQty
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/status`
+//           ] = 'available'
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/soldTo`
+//           ] = null
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/soldToId`
+//           ] = null
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/soldDate`
+//           ] = null
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/dcNumber`
+//           ] = null
+//         }
+//       }
+
+//       updates[
+//         `companies/${companyId}/challans/${id}`
+//       ] = null
+
+//       await update(
+//         ref(db),
+//         updates
+//       )
+//     } catch (err) {
+//       console.error(
+//         'Delete error:',
+//         err
+//       )
+
+//       setError(
+//         'Failed to delete challan'
+//       )
+//     }
+//   }
+
+//   /* ============================================================
+//      TOGGLE STOCK CHECKBOX
+//      ============================================================ */
+
+//   function toggleStockSelection(
+//     stockId
+//   ) {
+//     setSelectedStockIds(
+//       (prev) => {
+//         if (
+//           prev.includes(stockId)
+//         ) {
+//           return prev.filter(
+//             (id) =>
+//               id !== stockId
+//           )
+//         }
+
+//         return [
+//           ...prev,
+//           stockId
+//         ]
+//       }
+//     )
+//   }
+
+//   /* ============================================================
+//      SELECT ALL FILTERED
+//      ============================================================ */
+
+//   function selectAllFiltered() {
+//     const filteredIds =
+//       filteredAvailableStock.map(
+//         (s) => s.id
+//       )
+
+//     setSelectedStockIds(
+//       (prev) => {
+//         const merged =
+//           new Set([
+//             ...prev,
+//             ...filteredIds
+//           ])
+
+//         return Array.from(
+//           merged
+//         )
+//       }
+//     )
+//   }
+
+//   /* ============================================================
+//      CLEAR SELECTION
+//      ============================================================ */
+
+//   function clearSelection() {
+//     setSelectedStockIds([])
+//   }
+
+//   /* ============================================================
+//      ADD SELECTED ITEMS
+//      ============================================================ */
+
+//   function addSelectedItems() {
+//     if (
+//       !stock ||
+//       selectedStockIds.length === 0
+//     ) {
+//       setError(
+//         'Kam az kam aik product select karein.'
+//       )
+
+//       return
+//     }
+
+//     const newItems = []
+//     const skipped = []
+
+//     for (
+//       const stockId of selectedStockIds
+//     ) {
+//       const selectedStock =
+//         stock.find(
+//           (s) =>
+//             s.id === stockId
+//         )
+
+//       if (!selectedStock)
+//         continue
+
+//       const alreadyAdded =
+//         items.some(
+//           (item) =>
+//             item.stockId ===
+//             selectedStock.id
+//         )
+
+//       if (alreadyAdded) {
+//         skipped.push(
+//           selectedStock.name ||
+//             'Product'
+//         )
+
+//         continue
+//       }
+
+//       const status =
+//         String(
+//           selectedStock.status ||
+//             ''
+//         )
+//           .toLowerCase()
+//           .trim()
+
+//       const stockType =
+//         String(
+//           selectedStock.stockType ||
+//             ''
+//         )
+//           .toLowerCase()
+//           .trim()
+
+//       const type =
+//         String(
+//           selectedStock.type ||
+//             ''
+//         )
+//           .toLowerCase()
+//           .trim()
+
+//       const isDemoProduct =
+//         status === 'demo' ||
+//         stockType === 'demo' ||
+//         type === 'demo' ||
+//         selectedStock.demo ===
+//           true ||
+//         selectedStock.isDemo ===
+//           true ||
+//         selectedStock.isDemoProduct ===
+//           true
+
+//       if (isDemoProduct) {
+//         skipped.push(
+//           selectedStock.name ||
+//             'Demo product'
+//         )
+
+//         continue
+//       }
+
+//       if (status === 'sold') {
+//         skipped.push(
+//           selectedStock.name ||
+//             'Sold product'
+//         )
+
+//         continue
+//       }
+
+//       const isSerialized =
+//         !!selectedStock.mac ||
+//         !!selectedStock.serial
+
+//       let qty = 1
+
+//       if (!isSerialized) {
+//         const available =
+//           Math.max(
+//             1,
+//             Number(
+//               selectedStock.quantity
+//             ) || 1
+//           )
+
+//         qty = Math.min(
+//           1,
+//           available
+//         )
+//       }
+
+//       newItems.push({
+//         stockId:
+//           selectedStock.id,
+
+//         name:
+//           selectedStock.name ||
+//           '',
+
+//         category:
+//           selectedStock.category ||
+//           '',
+
+//         mac:
+//           selectedStock.mac ||
+//           '',
+
+//         serial:
+//           selectedStock.serial ||
+//           '',
+
+//         qty,
+
+//         available:
+//           Number(
+//             selectedStock.quantity
+//           ) || 0
+//       })
+//     }
+
+//     if (
+//       newItems.length === 0
+//     ) {
+//       setError(
+//         'Selected products add nahi ho sake.'
+//       )
+
+//       return
+//     }
+
+//     setItems(
+//       (prev) => [
+//         ...prev,
+//         ...newItems
+//       ]
+//     )
+
+//     setSelectedStockIds([])
+//     setStockSearch('')
+//     setPickQty(1)
+//     setError('')
+//   }
+
+//   /* ============================================================
+//      ADD SINGLE ITEM
+//      ============================================================ */
+
+//   function addItem(stockId) {
+//     if (!stock) return
+
+//     const selectedStock =
+//       stock.find(
+//         (s) =>
+//           s.id === stockId
+//       )
+
+//     if (!selectedStock)
+//       return
+
+//     const alreadyAdded =
+//       items.some(
+//         (item) =>
+//           item.stockId ===
+//           selectedStock.id
+//       )
+
+//     if (alreadyAdded) {
+//       setError(
+//         'Ye product already list mein hai.'
+//       )
+
+//       return
+//     }
+
+//     const status =
+//       String(
+//         selectedStock.status ||
+//           ''
+//       )
+//         .toLowerCase()
+//         .trim()
+
+//     const stockType =
+//       String(
+//         selectedStock.stockType ||
+//           ''
+//       )
+//         .toLowerCase()
+//         .trim()
+
+//     const type =
+//       String(
+//         selectedStock.type ||
+//           ''
+//       )
+//         .toLowerCase()
+//         .trim()
+
+//     const isDemoProduct =
+//       status === 'demo' ||
+//       stockType === 'demo' ||
+//       type === 'demo' ||
+//       selectedStock.demo ===
+//         true ||
+//       selectedStock.isDemo ===
+//         true ||
+//       selectedStock.isDemoProduct ===
+//         true
+
+//     if (isDemoProduct) {
+//       setError(
+//         'Demo product Delivery Challan mein add nahi kiya ja sakta.'
+//       )
+
+//       return
+//     }
+
+//     const isSerialized =
+//       !!selectedStock.mac ||
+//       !!selectedStock.serial
+
+//     let qty = 1
+
+//     if (!isSerialized) {
+//       qty = Math.min(
+//         Math.max(
+//           1,
+//           Number(pickQty) || 1
+//         ),
+//         Math.max(
+//           1,
+//           Number(
+//             selectedStock.quantity
+//           ) || 1
+//         )
+//       )
+//     }
+
+//     setItems(
+//       (prev) => [
+//         ...prev,
+//         {
+//           stockId:
+//             selectedStock.id,
+
+//           name:
+//             selectedStock.name ||
+//             '',
+
+//           category:
+//             selectedStock.category ||
+//             '',
+
+//           mac:
+//             selectedStock.mac ||
+//             '',
+
+//           serial:
+//             selectedStock.serial ||
+//             '',
+
+//           qty,
+
+//           available:
+//             Number(
+//               selectedStock.quantity
+//             ) || 0
+//         }
+//       ]
+//     )
+
+//     setSelectedStockIds([])
+//     setStockSearch('')
+//     setPickQty(1)
+//     setError('')
+//   }
+
+//   /* ============================================================
+//      REMOVE ITEM
+//      ============================================================ */
+
+//   function removeItem(stockId) {
+//     setItems(
+//       (prev) =>
+//         prev.filter(
+//           (item) =>
+//             item.stockId !==
+//             stockId
+//         )
+//     )
+//   }
+
+//   /* ============================================================
+//      CHANGE QTY
+//      ============================================================ */
+
+//   function changeItemQty(
+//     stockId,
+//     value
+//   ) {
+//     const stockItem =
+//       stock?.find(
+//         (s) =>
+//           s.id === stockId
+//       )
+
+//     if (!stockItem) return
+
+//     const currentQty =
+//       Number(value) || 1
+
+//     const maxQty =
+//       Number(
+//         stockItem.quantity
+//       ) || 1
+
+//     const isSerialized =
+//       !!stockItem.mac ||
+//       !!stockItem.serial
+
+//     const finalQty =
+//       isSerialized
+//         ? 1
+//         : Math.min(
+//             Math.max(
+//               1,
+//               currentQty
+//             ),
+//             maxQty
+//           )
+
+//     setItems(
+//       (prev) =>
+//         prev.map(
+//           (item) =>
+//             item.stockId ===
+//             stockId
+//               ? {
+//                   ...item,
+//                   qty:
+//                     finalQty
+//                 }
+//               : item
+//         )
+//     )
+//   }
+
+//   /* ============================================================
+//      RESTORE OLD STOCK
+//      ============================================================ */
+
+//   async function restoreOldStock(
+//     oldItems
+//   ) {
+//     if (!oldItems?.length)
+//       return {}
+
+//     const updates = {}
+
+//     for (
+//       const item of oldItems
+//     ) {
+//       if (!item.stockId)
+//         continue
+
+//       const stockRef =
+//         ref(
+//           db,
+//           `companies/${companyId}/stock/${item.stockId}`
+//         )
+
+//       const snap =
+//         await get(stockRef)
+
+//       if (!snap.exists())
+//         continue
+
+//       const stockItem =
+//         snap.val()
+
+//       if (
+//         stockItem.mac ||
+//         stockItem.serial ||
+//         item.mac ||
+//         item.serial
+//       ) {
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/status`
+//         ] = 'available'
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldTo`
+//         ] = null
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldToId`
+//         ] = null
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldDate`
+//         ] = null
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/dcNumber`
+//         ] = null
+//       } else {
+//         const currentQty =
+//           Number(
+//             stockItem.quantity
+//           ) || 0
+
+//         const restoredQty =
+//           currentQty +
+//           (Number(item.qty) || 0)
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/quantity`
+//         ] = restoredQty
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/status`
+//         ] = 'available'
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldTo`
+//         ] = null
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldToId`
+//         ] = null
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldDate`
+//         ] = null
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/dcNumber`
+//         ] = null
+//       }
+//     }
+
+//     return updates
+//   }
+
+//   /* ============================================================
+//      DEDUCT STOCK
+//      ============================================================ */
+
+//   async function deductStock(
+//     newItems,
+//     customer,
+//     customerId,
+//     dcNumber,
+//     date
+//   ) {
+//     const updates = {}
+
+//     for (
+//       const item of newItems
+//     ) {
+//       if (!item.stockId)
+//         continue
+
+//       const stockRef =
+//         ref(
+//           db,
+//           `companies/${companyId}/stock/${item.stockId}`
+//         )
+
+//       const snap =
+//         await get(stockRef)
+
+//       if (!snap.exists())
+//         continue
+
+//       const stockItem =
+//         snap.val()
+
+//       if (
+//         stockItem.mac ||
+//         stockItem.serial
+//       ) {
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/status`
+//         ] = 'sold'
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldTo`
+//         ] = customer.name || customer.company || ''
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldToId`
+//         ] = customerId
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldDate`
+//         ] = date
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/dcNumber`
+//         ] = dcNumber
+//       } else {
+//         const currentQty =
+//           Number(
+//             stockItem.quantity
+//           ) || 0
+
+//         const requestedQty =
+//           Number(item.qty) || 0
+
+//         if (
+//           requestedQty >
+//           currentQty
+//         ) {
+//           throw new Error(
+//             `Stock kam hai: ${item.name}`
+//           )
+//         }
+
+//         const newQty =
+//           Math.max(
+//             0,
+//             currentQty -
+//               requestedQty
+//           )
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/quantity`
+//         ] = newQty
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldDate`
+//         ] = date
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldTo`
+//         ] = customer.name || customer.company || ''
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldToId`
+//         ] = customerId
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/dcNumber`
+//         ] = dcNumber
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/status`
+//         ] =
+//           newQty === 0
+//             ? 'sold'
+//             : 'available'
+//       }
+//     }
+
+//     return updates
+//   }
+
+//   /* ============================================================
+//      SUBMIT
+//      ============================================================ */
+
+//   async function handleSubmit(e) {
+//     e.preventDefault()
+
+//     setError('')
+//     setDcNumberError('')
+
+//     if (
+//       !customerId ||
+//       items.length === 0
+//     ) {
+//       setError(
+//         'Customer aur kam az kam aik product select karein.'
+//       )
+
+//       return
+//     }
+
+//     if (!customers) {
+//       setError(
+//         'Customers load nahi hue.'
+//       )
+
+//       return
+//     }
+
+//     const customer =
+//       customers.find(
+//         (c) =>
+//           c.id === customerId
+//       )
+
+//     if (!customer) {
+//       setError(
+//         'Customer nahi mila.'
+//       )
+
+//       return
+//     }
+
+//     const isDcValid = await validateDcNumber(dcNumber)
+//     if (!isDcValid) {
+//       return
+//     }
+
+//     setSaving(true)
+
+//     try {
+//       const date =
+//         editingChallan?.date ||
+//         dcDate ||
+//         todayISO()
+
+//       let finalDcNumber =
+//         dcNumber
+
+//       if (!editingChallan) {
+//         await incrementDcCounter(
+//           companyId
+//         )
+
+//         if (
+//           !finalDcNumber ||
+//           finalDcNumber.trim() === ''
+//         ) {
+//           const dateStr =
+//             getTodayDateString()
+
+//           const timestamp =
+//             Date.now()
+//               .toString()
+//               .slice(-6)
+
+//           finalDcNumber =
+//             `DC-${dateStr}-${timestamp}`
+
+//           setDcNumber(
+//             finalDcNumber
+//           )
+//         }
+//       }
+
+//       /* ========================================================
+//          EDIT CHALLAN
+//          ======================================================== */
+
+//       if (editingChallan) {
+//         const restoreUpdates =
+//           await restoreOldStock(
+//             editingChallan.items ||
+//               []
+//           )
+
+//         const deductUpdates =
+//           await deductStock(
+//             items,
+//             customer,
+//             customerId,
+//             finalDcNumber,
+//             date          )
+
+//         const allUpdates = {
+//           ...restoreUpdates,
+//           ...deductUpdates,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/dcNumber`]:
+//             finalDcNumber,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/date`]:
+//             date,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/customerId`]:
+//             customerId,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/customerName`]:
+//             customer.name || '',
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/customerCompany`]:
+//             customer.company || '',
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/customerPhone`]:
+//             customer.phone || '',
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/customerAddress`]:
+//             customer.address || '',
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/companyName`]:
+//             companyName,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/companyLogo`]:
+//             companyLogo,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/companyAddress`]:
+//             companyAddress,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/companyEmail`]:
+//             companyEmail,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/companyPhone`]:
+//             companyPhone,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/items`]:
+//             items,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/updatedAt`]:
+//             Date.now()
+//         }
+
+//         await update(
+//           ref(db),
+//           allUpdates
+//         )
+
+//         setPreview({
+//           id: editingChallan.id,
+
+//           dcNumber:
+//             finalDcNumber,
+
+//           date,
+
+//           customerId,
+
+//           customer,
+
+//           items,
+
+//           companyName,
+//           companyLogo,
+//           companyAddress,
+//           companyEmail,
+//           companyPhone
+//         })
+
+//         setShowForm(false)
+
+//         resetForm()
+
+//         return
+//       }
+
+//       /* ========================================================
+//          NEW CHALLAN
+//          ======================================================== */
+
+//       const challansRef =
+//         ref(
+//           db,
+//           `companies/${companyId}/challans`
+//         )
+
+//       const newRef =
+//         await push(
+//           challansRef,
+//           {
+//             dcNumber:
+//               finalDcNumber,
+
+//             date,
+
+//             customerId,
+
+//             customerName:
+//               customer.name || '',
+
+//             customerCompany:
+//               customer.company || '',
+
+//             customerPhone:
+//               customer.phone || '',
+
+//             customerAddress:
+//               customer.address || '',
+
+//             companyName,
+//             companyLogo,
+//             companyAddress,
+//             companyEmail,
+//             companyPhone,
+
+//             items,
+
+//             createdAt:
+//               Date.now()
+//           }
+//         )
+
+//       const updates =
+//         await deductStock(
+//           items,
+//           customer,
+//           customerId,
+//           finalDcNumber,
+//           date
+//         )
+
+//       await update(
+//         ref(db),
+//         updates
+//       )
+
+//       setPreview({
+//         id: newRef.key,
+
+//         dcNumber:
+//           finalDcNumber,
+
+//         date,
+
+//         customerId,
+
+//         customer,
+
+//         items,
+
+//         companyName,
+//         companyLogo,
+//         companyAddress,
+//         companyEmail,
+//         companyPhone
+//       })
+
+//       setShowForm(false)
+
+//       resetForm()
+//     } catch (err) {
+//       console.error(
+//         'Challan save/update failed:',
+//         err
+//       )
+
+//       setError(
+//         err?.message ||
+//           'Challan save nahi ho saka. Dobara koshish karein.'
+//       )
+//     } finally {
+//       setSaving(false)
+//     }
+//   }
+
+//   /* ============================================================
+//      PDF PREVIEW
+//      ============================================================ */
+
+//   function handleDownloadPdf(challan) {
+//     const previewChallan = {
+//       id: challan.id,
+
+//       dcNumber: challan.dcNumber,
+
+//       date: challan.date,
+
+//       items: challan.items || [],
+
+//       companyName: challan.companyName || companyName,
+//       companyLogo: challan.companyLogo || companyLogo,
+//       companyAddress: challan.companyAddress || companyAddress,
+//       companyEmail: challan.companyEmail || companyEmail,
+//       companyPhone: challan.companyPhone || companyPhone,
+
+//       customer: {
+//         name: challan.customerName || '',
+//         company: challan.customerCompany || '',
+//         phone: challan.customerPhone || '',
+//         address: challan.customerAddress || ''
+//       }
+//     }
+
+//     setPreview(previewChallan)
+//   }
+
+//   /* ============================================================
+//      PAGE
+//      ============================================================ */
+
+//   return (
+//     <div>
+
+//       {/* HEADER */}
+
+//       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+
+//         <div>
+
+//           <h1 className="font-display text-2xl font-semibold text-ink">
+//             Delivery Challan
+//           </h1>
+
+//           <p className="text-sm text-slateink mt-0.5">
+//             Create a DC — stock will be automatically deducted.
+//           </p>
+
+//         </div>
+
+//         <button
+//           onClick={openNewChallan}
+//           className="flex items-center gap-2 rounded-lg bg-ink text-white text-sm font-medium px-4 py-2.5 hover:bg-inkSoft transition-colors self-start"
+//         >
+//           <Plus size={16} />
+
+//           New Challan
+//         </button>
+
+//       </div>
+
+//       {/* SEARCH BAR + SORT */}
+
+//       <div className="mb-6 flex flex-col sm:flex-row gap-4">
+
+//         <div className="flex-1">
+
+//           <div className="relative max-w-md">
+
+//             <input
+//               type="text"
+//               value={searchTerm}
+//               onChange={(e) =>
+//                 setSearchTerm(e.target.value)
+//               }
+//               className="input w-full pl-9 pr-4"
+//               placeholder="Search by DC #, customer, company, date..."
+//             />
+
+//             {searchTerm && (
+//               <button
+//                 type="button"
+//                 onClick={() => setSearchTerm('')}
+//                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slateink hover:text-ink"
+//               >
+//                 <X size={14} />
+//               </button>
+//             )}
+
+//           </div>
+
+//           <p className="text-xs text-slateink mt-1">
+//             Search by DC number, customer name, company name, or date
+//           </p>
+
+//         </div>
+
+//         <div className="flex items-start gap-2">
+
+//           <div className="flex items-center gap-2">
+
+//             <ArrowUpDown size={14} className="text-slateink mt-1" />
+
+//             <select
+//               value={sortBy}
+//               onChange={(e) => setSortBy(e.target.value)}
+//               className="input text-sm py-2 pr-8 min-w-[180px]"
+//             >
+//               <option value="date-desc">Date (Newest First)</option>
+//               <option value="date-asc">Date (Oldest First)</option>
+//               <option value="items-desc">Items (Most First)</option>
+//               <option value="items-asc">Items (Least First)</option>
+//             </select>
+
+//           </div>
+
+//         </div>
+
+//       </div>
+
+//       {/* CHALLAN LIST */}
+
+//       {challans === null ? (
+//         <Loader />
+//       ) : filteredChallans.length === 0 ? (
+//         <div className="border border-dashed border-line rounded-2xl py-16 flex flex-col items-center justify-center text-center">
+
+//           <FileText
+//             className="text-slateink mb-3"
+//             size={28}
+//           />
+
+//           <p className="font-medium text-ink">
+//             {searchTerm
+//               ? 'No matching delivery challans found'
+//               : 'No Delivery Challan has been created yet.'}
+//           </p>
+
+//           {searchTerm && (
+//             <p className="text-sm text-slateink mt-1">
+//               Try searching with different keywords
+//             </p>
+//           )}
+
+//         </div>
+//       ) : (
+//         <div className="bg-surface rounded-2xl border border-line shadow-card overflow-hidden">
+
+//           <div className="overflow-x-auto">
+
+//             <table className="w-full text-sm">
+
+//               <thead>
+
+//                 <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-slateink">
+
+//                   <th className="px-4 py-3 font-medium">
+//                     DC #
+//                   </th>
+
+//                   <th className="px-4 py-3 font-medium">
+//                     Customer
+//                   </th>
+
+//                   <th className="px-4 py-3 font-medium">
+//                     Items
+//                   </th>
+
+//                   <th className="px-4 py-3 font-medium">
+//                     Date
+//                   </th>
+
+//                   <th className="px-4 py-3 font-medium">
+//                     Actions
+//                   </th>
+
+//                 </tr>
+
+//               </thead>
+
+//               <tbody>
+
+//                 {filteredChallans.map(
+//                   (c) => {
+
+//                     const hasName = !!c.customerName
+//                     const hasCompany = !!c.customerCompany
+
+//                     return (
+
+//                       <tr
+//                         key={c.id}
+//                         className="border-b border-line last:border-0 hover:bg-paper/60"
+//                       >
+
+//                         <td className="px-4 py-3 font-mono text-xs">
+//                           {c.dcNumber}
+//                         </td>
+
+//                         <td className="px-4 py-3">
+
+//                           {hasName && (
+//                             <>
+//                               <p className="font-medium text-ink">
+//                                 {c.customerName}
+//                               </p>
+//                               {hasCompany && (
+//                                 <p className="text-xs text-slateink">
+//                                   {c.customerCompany}
+//                                 </p>
+//                               )}
+//                             </>
+//                           )}
+
+//                           {!hasName && hasCompany && (
+//                             <p className="font-medium text-ink">
+//                               {c.customerCompany}
+//                             </p>
+//                           )}
+
+//                           {!hasName && !hasCompany && (
+//                             <p className="font-medium text-ink">
+//                               -
+//                             </p>
+//                           )}
+
+//                         </td>
+
+//                         <td className="px-4 py-3 text-xs text-slateink">
+//                           {c.items?.length || 0} item(s)
+//                         </td>
+
+//                         <td className="px-4 py-3 text-xs font-mono text-slateink">
+//                           {formatDate(c.date)}
+//                         </td>
+
+//                         <td className="px-4 py-3">
+
+//                           <div className="flex justify-end items-center gap-2 flex-wrap">
+
+//                             {/* VIEW */}
+
+//                             <button
+//                               onClick={() =>
+//                                 setPreview({
+//                                   id: c.id,
+
+//                                   dcNumber:
+//                                     c.dcNumber,
+
+//                                   date:
+//                                     c.date,
+
+//                                   items:
+//                                     c.items ||
+//                                     [],
+
+//                                   companyName:
+//                                     c.companyName ||
+//                                     companyName,
+
+//                                   companyLogo:
+//                                     c.companyLogo ||
+//                                     companyLogo,
+
+//                                   companyAddress:
+//                                     c.companyAddress ||
+//                                     companyAddress,
+
+//                                   companyEmail:
+//                                     c.companyEmail ||
+//                                     companyEmail,
+
+//                                   companyPhone:
+//                                     c.companyPhone ||
+//                                     companyPhone,
+
+//                                   customer: {
+//                                     name:
+//                                       c.customerName,
+
+//                                     company:
+//                                       c.customerCompany,
+
+//                                     phone:
+//                                       c.customerPhone,
+
+//                                     address:
+//                                       c.customerAddress
+//                                   }
+//                                 })
+//                               }
+//                               className="flex items-center gap-1.5 text-teal-dark text-xs font-medium hover:underline"
+//                             >
+
+//                               <Printer size={14} />
+
+//                               View
+
+//                             </button>
+
+//                             {/* EDIT */}
+
+//                             <button
+//                               onClick={() =>
+//                                 openEditChallan(c)
+//                               }
+//                               className="flex items-center gap-1.5 text-ink text-xs font-medium hover:underline"
+//                             >
+
+//                               <Pencil size={14} />
+
+//                               Edit
+
+//                             </button>
+
+//                             {/* PDF */}
+
+//                             <button
+//                               onClick={() =>
+//                                 handleDownloadPdf(c)
+//                               }
+//                               className="flex items-center gap-1.5 text-red-600 text-xs font-medium hover:text-red-800"
+//                             >
+
+//                               <Download size={14} />
+
+//                               PDF
+
+//                             </button>
+
+//                             {/* DELETE */}
+
+//                             <button
+//                               onClick={() =>
+//                                 handleDeleteChallan(
+//                                   c.id
+//                                 )
+//                               }
+//                               className="flex items-center gap-1.5 text-coral text-xs font-medium hover:text-red-700"
+//                             >
+
+//                               <Trash2 size={14} />
+
+//                               Delete
+
+//                             </button>
+
+//                           </div>
+
+//                         </td>
+
+//                       </tr>
+
+//                     )
+//                   }
+//                 )}
+
+//               </tbody>
+
+//             </table>
+
+//           </div>
+
+//         </div>
+//       )}
+
+//       {/* CREATE / EDIT */}
+
+//       {showForm && (
+//         <Modal
+//           title={
+//             editingChallan
+//               ? `Edit Delivery Challan — ${editingChallan.dcNumber}`
+//               : 'New Delivery Challan'
+//           }
+//           onClose={() => {
+//             setShowForm(false)
+//             resetForm()
+//           }}
+//           wide
+//         >
+
+//           <form
+//             onSubmit={handleSubmit}
+//             className="space-y-5"
+//           >
+
+//             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+//               <label className="block">
+
+//                 <span className="text-xs font-medium text-slateink">
+//                   DC Number *
+//                 </span>
+
+//                 <input
+//                   type="text"
+//                   value={dcNumber}
+//                   onChange={(e) => {
+//                     setDcNumber(e.target.value)
+//                     setDcNumberError('')
+//                   }}
+//                   onBlur={() => {
+//                     if (dcNumber.trim()) {
+//                       validateDcNumber(dcNumber)
+//                     }
+//                   }}
+//                   className={`input mt-1 ${dcNumberError ? 'border-red-500 focus:ring-red-500' : ''}`}
+//                   placeholder="DC-YYYYMMDD-0001"
+//                   required
+//                 />
+
+//                 {dcNumberError && (
+//                   <p className="text-xs text-red-500 mt-1">
+//                     {dcNumberError}
+//                   </p>
+//                 )}
+
+//                 <small className="text-xs text-slateink mt-1 block">
+//                   Format: DC-YYYYMMDD-0001
+//                 </small>
+
+//               </label>
+
+//               <div className="block">
+
+//                 <span className="text-xs font-medium text-slateink">
+//                   Customer *
+//                 </span>
+
+//                 <div className="relative">
+
+//                   <input
+//                     type="text"
+//                     value={
+//                       customerSearch
+//                     }
+//                     onChange={(e) => {
+
+//                       if (
+//                         editingChallan
+//                       ) {
+//                         return
+//                       }
+
+//                       const value =
+//                         e.target.value
+
+//                       setCustomerSearch(
+//                         value
+//                       )
+
+//                       setCustomerId('')
+
+//                       setShowCustomerDropdown(
+//                         true
+//                       )
+
+//                       setError('')
+//                     }}
+//                     onFocus={() => {
+
+//                       if (
+//                         editingChallan
+//                       ) {
+//                         return
+//                       }
+
+//                       setShowCustomerDropdown(
+//                         true
+//                       )
+//                     }}
+//                     disabled={
+//                       !!editingChallan
+//                     }
+//                     required
+//                     className={`input mt-1 ${
+//                       editingChallan
+//                         ? 'bg-slate-100 cursor-not-allowed'
+//                         : ''
+//                     }`}
+//                     placeholder={
+//                       editingChallan
+//                         ? 'Customer cannot be changed while editing'
+//                         : 'Search customer by name, company or phone...'
+//                     }
+//                   />
+
+//                   {!editingChallan &&
+//                     customerSearch && (
+//                       <button
+//                         type="button"
+//                         onClick={
+//                           clearCustomer
+//                         }
+//                         className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5 text-slateink hover:text-ink text-sm"
+//                         title="Clear customer"
+//                       >
+//                         ×
+//                       </button>
+//                     )}
+
+//                   {!editingChallan &&
+//                     showCustomerDropdown && (
+//                       <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-line rounded-lg shadow-lg overflow-hidden">
+
+//                         <div className="max-h-64 overflow-y-auto">
+
+//                           {customers ===
+//                           null ? (
+//                             <div className="px-4 py-4 text-sm text-slateink text-center">
+//                               Loading customers...
+//                             </div>
+//                           ) : filteredCustomers.length ===
+//                             0 ? (
+//                             <div className="px-4 py-4 text-sm text-slateink text-center">
+//                               No customer found.
+//                             </div>
+//                           ) : (
+//                             filteredCustomers.map(
+//                               (
+//                                 customer
+//                               ) => (
+
+//                                 <button
+//                                   key={
+//                                     customer.id
+//                                   }
+//                                   type="button"
+//                                   onClick={() =>
+//                                     selectCustomer(
+//                                       customer
+//                                     )
+//                                   }
+//                                   className="w-full text-left px-4 py-3 hover:bg-paper border-b border-line last:border-b-0 transition-colors"
+//                                 >
+
+//                                   <div className="flex items-start justify-between gap-3">
+
+//                                     <div className="min-w-0">
+
+//                                       {customer.name ? (
+//                                         <>
+//                                           <div className="font-medium text-sm text-ink truncate">
+//                                             {customer.name}
+//                                           </div>
+//                                           {customer.company && (
+//                                             <div className="text-xs text-slateink mt-0.5 truncate">
+//                                               {customer.company}
+//                                             </div>
+//                                           )}
+//                                         </>
+//                                       ) : (
+//                                         customer.company && (
+//                                           <div className="font-medium text-sm text-ink truncate">
+//                                             {customer.company}
+//                                           </div>
+//                                         )
+//                                       )}
+
+//                                       {customer.phone && (
+//                                         <div className="text-xs text-slateink mt-0.5">
+//                                           Phone:{' '}
+//                                           {
+//                                             customer.phone
+//                                           }
+//                                         </div>
+//                                       )}
+
+//                                       {customer.address && (
+//                                         <div className="text-xs text-slateink mt-0.5 truncate">
+//                                           {
+//                                             customer.address
+//                                           }
+//                                         </div>
+//                                       )}
+
+//                                     </div>
+
+//                                   </div>
+
+//                                 </button>
+
+//                               )
+//                             )
+//                           )}
+
+//                         </div>
+
+//                       </div>
+//                     )}
+
+//                 </div>
+
+//                 {editingChallan && (
+//                   <small className="text-xs text-slateink mt-1 block">
+//                     Customer cannot be changed while editing this challan.
+//                   </small>
+//                 )}
+
+//               </div>
+
+//             </div>
+
+//             <div>
+
+//               <span className="text-xs font-medium text-slateink">
+//                 Date
+//               </span>
+
+//               <input
+//                 type="date"
+//                 value={
+//                   editingChallan
+//                     ? (
+//                         editingChallan.date ||
+//                         todayISO()
+//                       )
+//                     : dcDate
+//                 }
+//                 onChange={(e) => {
+
+//                   if (
+//                     editingChallan
+//                   ) {
+//                     setEditingChallan({
+//                       ...editingChallan,
+//                       date:
+//                         e.target.value
+//                     })
+//                   } else {
+//                     setDcDate(
+//                       e.target.value
+//                     )
+//                   }
+
+//                 }}
+//                 className="input mt-1"
+//               />
+
+//             </div>
+
+//             <div className="border border-line rounded-xl p-4">
+
+//               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+
+//                 <p className="text-xs font-medium text-slateink">
+//                   Add Products
+//                 </p>
+
+//                 <p className="text-xs text-slateink">
+//                   Search, tick multiple products and add them together.
+//                 </p>
+
+//               </div>
+
+//               <div className="mb-3">
+
+//                 <input
+//                   type="text"
+//                   value={stockSearch}
+//                   onChange={(e) =>
+//                     setStockSearch(
+//                       e.target.value
+//                     )
+//                   }
+//                   className="input w-full"
+//                   placeholder="Search product by name, category, MAC or serial..."
+//                 />
+
+//               </div>
+
+//               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+
+//                 <p className="text-xs text-slateink">
+
+//                   {
+//                     filteredAvailableStock.length
+//                   }{' '}
+//                   product(s) found
+
+//                 </p>
+
+//                 <div className="flex items-center gap-3">
+
+//                   {selectedStockIds.length >
+//                     0 && (
+
+//                     <span className="text-xs font-medium text-teal-dark">
+
+//                       {
+//                         selectedStockIds.length
+//                       }{' '}
+//                       selected
+
+//                     </span>
+
+//                   )}
+
+//                   {filteredAvailableStock.length >
+//                     0 && (
+
+//                     <button
+//                       type="button"
+//                       onClick={
+//                         selectAllFiltered
+//                       }
+//                       className="text-xs font-medium text-ink hover:underline"
+//                     >
+//                       Select All
+//                     </button>
+
+//                   )}
+
+//                   {selectedStockIds.length >
+//                     0 && (
+
+//                     <button
+//                       type="button"
+//                       onClick={
+//                         clearSelection
+//                       }
+//                       className="text-xs font-medium text-coral hover:underline"
+//                     >
+//                       Clear
+//                     </button>
+
+//                   )}
+
+//                 </div>
+
+//               </div>
+
+//               <div className="border border-line rounded-lg overflow-hidden">
+
+//                 {filteredAvailableStock.length ===
+//                 0 ? (
+
+//                   <div className="px-4 py-6 text-center text-sm text-slateink">
+
+//                     {stock === null
+//                       ? 'Loading stock…'
+//                       : 'No matching products found.'}
+
+//                   </div>
+
+//                 ) : (
+
+//                   <div className="max-h-72 overflow-y-auto">
+
+//                     {filteredAvailableStock.map(
+//                       (s) => {
+
+//                         const isSelected =
+//                           selectedStockIds.includes(
+//                             s.id
+//                           )
+
+//                         const serialized =
+//                           !!s.mac ||
+//                           !!s.serial
+
+//                         return (
+
+//                           <label
+//                             key={s.id}
+//                             className={`
+//                               flex
+//                               items-center
+//                               gap-3
+//                               px-3
+//                               py-2.5
+//                               border-b
+//                               border-line
+//                               last:border-b-0
+//                               cursor-pointer
+//                               transition-colors
+//                               ${
+//                                 isSelected
+//                                   ? 'bg-teal/10'
+//                                   : 'hover:bg-paper'
+//                               }
+//                             `}
+//                           >
+
+//                             <input
+//                               type="checkbox"
+//                               checked={
+//                                 isSelected
+//                               }
+//                               onChange={() =>
+//                                 toggleStockSelection(
+//                                   s.id
+//                                 )
+//                               }
+//                               className="w-4 h-4 accent-teal shrink-0"
+//                             />
+
+//                             <div className="flex-1 min-w-0">
+
+//                               <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+
+//                                 <span className="font-medium text-sm text-ink truncate">
+//                                   {s.name}
+//                                 </span>
+
+//                                 {s.category && (
+//                                   <span className="text-xs text-slateink truncate">
+//                                     {
+//                                       s.category
+//                                     }
+//                                   </span>
+//                                 )}
+
+//                               </div>
+
+//                               <div className="text-xs text-slateink mt-0.5">
+
+//                                 {s.mac && (
+//                                   <span>
+//                                     MAC:{' '}
+//                                     {s.mac}
+//                                   </span>
+//                                 )}
+
+//                                 {s.serial && (
+//                                   <span>
+//                                     {s.mac
+//                                       ? ' · '
+//                                       : ''}
+//                                     Serial:{' '}
+//                                     {
+//                                       s.serial
+//                                     }
+//                                   </span>
+//                                 )}
+
+//                                 {!serialized && (
+//                                   <span>
+//                                     {!s.mac &&
+//                                     !s.serial
+//                                       ? `Available Qty: ${
+//                                           Number(
+//                                             s.quantity
+//                                           ) ||
+//                                           0
+//                                         }`
+//                                       : ''}
+//                                   </span>
+//                                 )}
+
+//                               </div>
+
+//                             </div>
+
+//                             <span className="text-xs text-slateink shrink-0">
+
+//                               {serialized
+//                                 ? 'Qty 1'
+//                                 : `Qty ${
+//                                     Number(
+//                                       s.quantity
+//                                     ) ||
+//                                     0
+//                                   }`}
+
+//                             </span>
+
+//                           </label>
+
+//                         )
+//                       }
+//                     )}
+
+//                   </div>
+
+//                 )}
+
+//               </div>
+
+//               <div className="flex flex-col sm:flex-row gap-2 mt-3">
+
+//                 <button
+//                   type="button"
+//                   onClick={
+//                     addSelectedItems
+//                   }
+//                   disabled={
+//                     selectedStockIds.length ===
+//                     0
+//                   }
+//                   className="rounded-lg bg-teal text-white text-sm font-medium px-4 py-2.5 hover:bg-teal-dark disabled:opacity-50 disabled:cursor-not-allowed flex-1"
+//                 >
+
+//                   Add Selected
+
+//                   {selectedStockIds.length >
+//                     0
+//                     ? ` (${selectedStockIds.length})`
+//                     : ''}
+
+//                 </button>
+
+//               </div>
+
+//               {items.length > 0 && (
+
+//                 <div className="mt-4 space-y-2">
+
+//                   <div className="text-xs font-medium text-slateink">
+//                     Selected Products ({items.length})
+//                   </div>
+
+//                   {items.map(
+//                     (item) => {
+
+//                       const serialized =
+//                         !!item.mac ||
+//                         !!item.serial
+
+//                       return (
+
+//                         <div
+//                           key={
+//                             item.stockId
+//                           }
+//                           className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-paper rounded-lg px-3 py-3 text-sm"
+//                         >
+
+//                           <div>
+
+//                             <div className="font-medium text-ink">
+//                               {
+//                                 item.name
+//                               }
+//                             </div>
+
+//                             <div className="text-xs text-slateink mt-1">
+
+//                               {item.category &&
+//                                 `${item.category} · `}
+
+//                               {item.mac &&
+//                                 `MAC ${item.mac}`}
+
+//                               {item.serial &&
+//                                 `Serial ${item.serial}`}
+
+//                               {!item.mac &&
+//                                 !item.serial &&
+//                                 `Qty ${item.qty}`}
+
+//                             </div>
+
+//                           </div>
+
+//                           <div className="flex items-center gap-3">
+
+//                             {!serialized && (
+
+//                               <input
+//                                 type="number"
+//                                 min={1}
+//                                 max={
+//                                   Number(
+//                                     stock?.find(
+//                                       (s) =>
+//                                         s.id ===
+//                                         item.stockId
+//                                     )?.quantity
+//                                   ) ||
+//                                   item.available ||
+//                                   1
+//                                 }
+//                                 value={
+//                                   item.qty
+//                                 }
+//                                 onChange={(
+//                                   e
+//                                 ) =>
+//                                   changeItemQty(
+//                                     item.stockId,
+//                                     e.target.value
+//                                   )
+//                                 }
+//                                 className="input w-24"
+//                               />
+
+//                             )}
+
+//                             {serialized && (
+//                               <span className="text-xs text-slateink">
+//                                 Qty 1
+//                               </span>
+//                             )}
+
+//                             <button
+//                               type="button"
+//                               onClick={() =>
+//                                 removeItem(
+//                                   item.stockId
+//                                 )
+//                               }
+//                               className="text-coral"
+//                               title="Remove"
+//                             >
+
+//                               <Trash2
+//                                 size={16}
+//                               />
+
+//                             </button>
+
+//                           </div>
+
+//                         </div>
+
+//                       )
+//                     }
+//                   )}
+
+//                 </div>
+
+//               )}
+
+//             </div>
+
+//             {error && (
+//               <p className="text-xs font-medium text-coral bg-coral-light rounded-lg px-3 py-2">
+//                 {error}
+//               </p>
+//             )}
+
+//             <button
+//               type="submit"
+//               disabled={saving || !!dcNumberError}
+//               className="w-full rounded-lg bg-ink text-white text-sm font-medium py-2.5 hover:bg-inkSoft transition-colors disabled:opacity-60"
+//             >
+
+//               {saving
+//                 ? editingChallan
+//                   ? 'Updating…'
+//                   : 'Saving…'
+//                 : editingChallan
+//                   ? 'Update Challan'
+//                   : 'Generate Challan'}
+
+//             </button>
+
+//           </form>
+
+//         </Modal>
+//       )}
+
+//       {preview && (
+//         <PrintableModal
+//           doc={preview}
+//           type="Delivery Challan"
+//           onClose={() =>
+//             setPreview(null)
+//           }
+//         />
+//       )}
+
+//     </div>
+//   )
+// }
+
+// /* =================================================================
+//    PRINTABLE DELIVERY CHALLAN
+//    ================================================================= */
+
+// export function PrintableModal({
+//   doc,
+//   type,
+//   onClose
+// }) {
+//   const printRef =
+//     useRef(null)
+
+//   /* ============================================================
+//      LIVE COMPANY DATA
+//      ============================================================
+//      PrintableModal now reads the live company object from
+//      AuthContext, so even if a challan's saved snapshot is
+//      missing companyLogo / companyAddress / etc., we can
+//      still fall back to the CURRENT company data.
+//      ============================================================ */
+
+//   const { company } = useAuth()
+
+//   /* ============================================================
+//      PRINT
+//      ============================================================ */
+
+//   function handlePrint() {
+//     if (!printRef.current)
+//       return
+
+//     const content =
+//       printRef.current.innerHTML
+
+//     const win =
+//       window.open(
+//         '',
+//         '_blank',
+//         'width=1000,height=900'
+//       )
+
+//     if (!win) {
+//       alert(
+//         'Popup blocked hai. Browser mein popup allow karein.'
+//       )
+
+//       return
+//     }
+
+//     win.document.open()
+
+//     win.document.write(`
+
+// <!doctype html>
+
+// <html>
+
+// <head>
+
+// <meta charset="UTF-8" />
+
+// <title>
+//   ${type} ${doc.dcNumber || ''}
+// </title>
+
+// <style>
+
+// @page {
+//   size: A4;
+//   margin: 10mm 8mm 10mm 8mm;
+// }
+
+// * {
+//   box-sizing: border-box;
+// }
+
+// html,
+// body {
+//   margin: 0;
+//   padding: 0;
+//   width: 210mm;
+//   min-height: 297mm;
+// }
+
+// body {
+//   font-family:
+//     Arial,
+//     Helvetica,
+//     sans-serif;
+//   color: #111;
+//   background: #fff;
+// }
+
+// .dc-sheet {
+//   width: 100%;           /* page ki width ke andar rahe */
+//   min-height: auto;      /* fixed height nahi — content ke hisaab se grow kare */
+//   padding: 0;            /* padding ab @page de raha hai */
+//   margin: 0;
+//   background: #fff;
+//   position: relative;
+// }
+
+// .dc-title {
+//   text-align: center;
+//   font-size: 18px;
+//   line-height: 1;
+//   font-weight: 700;
+//   text-decoration: underline;
+//   margin:
+//     0
+//     0
+//     3mm
+//     0;
+// }
+
+// .dc-logo {
+//   width: 28mm;
+//   height: auto;
+//   object-fit: contain;
+//   display: block;
+//   margin:
+//     0
+//     0
+//     2mm
+//     0;
+// }
+
+// .dc-header {
+//   display: grid;
+//   grid-template-columns:
+//     43%
+//     57%;
+//   column-gap: 4mm;
+//   align-items: start;
+// }
+
+// .dc-left {
+//   font-size: 11px;
+//   line-height: 1.4;
+// }
+
+// .dc-label {
+//   font-weight: 700;
+//   text-decoration: underline;
+//   margin-bottom: 1mm;
+// }
+
+// .dc-company-name {
+//   font-weight: 600;
+//   margin: 0;
+//   line-height: 1.3;
+// }
+
+// .dc-address {
+//   white-space: pre-line;
+//   margin: 0;
+//   padding: 0;
+//   line-height: 1.35;
+// }
+
+// .dc-email {
+//   margin-top: 0.5mm;
+//   color: #0563c1;
+//   text-decoration: underline;
+// }
+
+// .dc-delivery-to {
+//   margin-top: 3.5mm;
+// }
+
+// .dc-delivery-to-name {
+//   font-weight: 600;
+// }
+
+// .dc-info-box {
+//   width: 100%;
+//   border:
+//     0.6px
+//     solid
+//     #b8b8b8;
+//   margin: 0;
+// }
+
+// .dc-info-row {
+//   display: grid;
+//   grid-template-columns:
+//     50%
+//     50%;
+//   min-height: 8mm;
+// }
+
+// .dc-info-cell {
+//   border:
+//     0.6px
+//     solid
+//     #b8b8b8;
+//   display: flex;
+//   align-items: center;
+//   padding:
+//     1.5mm
+//     2mm;
+//   font-size: 10.5px;
+// }
+
+// .dc-info-label {
+//   font-weight: 600;
+//   text-align: right;
+//   justify-content: flex-end;
+//   padding-right: 3mm;
+// }
+
+// .dc-info-value {
+//   font-weight: 600;
+//   justify-content: flex-start;
+//   padding-left: 3mm;
+// }
+
+// .dc-products {
+//   margin-top: 5mm;
+//   width: 100%;
+// }
+
+// .dc-product-table {
+//   width: 100%;
+//   border-collapse: collapse;
+//   table-layout: fixed;
+//   margin: 0;
+// }
+
+// .dc-product-table col:nth-child(1) {
+//   width: 9%;
+// }
+
+// .dc-product-table col:nth-child(2) {
+//   width: 30%;
+// }
+
+// .dc-product-table col:nth-child(3) {
+//   width: 14%;
+// }
+
+// .dc-product-table col:nth-child(4) {
+//   width: 25%;
+// }
+
+// .dc-product-table col:nth-child(5) {
+//   width: 22%;
+// }
+
+// .dc-product-table th,
+// .dc-product-table td {
+//   border:
+//     0.6px
+//     solid
+//     #b8b8b8;
+//   padding:
+//     1.8mm
+//     2mm;
+//   font-size: 10.5px;
+//   vertical-align: top;
+// }
+
+// .dc-product-table th {
+//   font-weight: 700;
+//   text-align: center;
+//   vertical-align: middle;
+// }
+
+// .dc-product-table td {
+//   text-align: center;
+// }
+
+// .dc-product-name {
+//   text-align: center !important;
+//   font-weight: 500;
+//   vertical-align: top !important;
+// }
+
+// .dc-multi-line {
+//   min-height: 5mm;
+//   line-height: 1.4;
+//   text-align: center;
+// }
+
+// .dc-signatures {
+//   margin-top: 18mm;
+//   width: 100%;
+//   font-size: 11px;
+// }
+
+// .dc-signature-top {
+//   display: grid;
+//   grid-template-columns:
+//     1fr
+//     1fr;
+//   column-gap: 20mm;
+//   margin-bottom: 7mm;
+// }
+
+// .dc-signature-heading {
+//   font-weight: 500;
+//   white-space: nowrap;
+// }
+
+// .dc-signature-heading.right {
+//   text-align: right;
+// }
+
+// .dc-signature-bottom {
+//   display: grid;
+//   grid-template-columns:
+//     1fr
+//     1fr;
+//   column-gap: 30mm;
+// }
+
+// .dc-signature-block {
+//   min-height: 25mm;
+//   position: relative;
+// }
+
+// .dc-signature-name {
+//   font-size: 11px;
+//   margin-bottom: 2mm;
+// }
+
+// .dc-signature-line {
+//   width: 72mm;
+//   border-bottom:
+//     0.7px
+//     solid
+//     #333;
+// }
+
+// .dc-signature-line.right {
+//   margin-left: auto;
+// }
+
+// @media print {
+//   html, body {
+//     width: auto;
+//     min-height: auto;
+//     margin: 0;
+//     padding: 0;
+//     background: #fff;
+//   }
+
+//   .dc-sheet {
+//     width: 100%;
+//     min-height: auto;
+//     margin: 0;
+//     padding: 0;
+//   }
+// }
+
+// </style>
+
+// </head>
+
+// <body>
+
+// ${content}
+
+// </body>
+
+// </html>
+
+// `)
+
+//     win.document.close()
+
+//     setTimeout(() => {
+//       win.focus()
+//       win.print()
+//     }, 500)
+//   }
+
+//   /* ============================================================
+//      GET MAC
+//      ============================================================ */
+
+//   function getMacLines(item) {
+//     if (!item)
+//       return []
+
+//     if (Array.isArray(item.mac))
+//       return item.mac
+
+//     if (
+//       typeof item.mac === 'string' &&
+//       item.mac.includes(',')
+//     ) {
+//       return item.mac
+//         .split(',')
+//         .map(
+//           (x) =>
+//             x.trim()
+//         )
+//         .filter(Boolean)
+//     }
+
+//     return item.mac
+//       ? [item.mac]
+//       : []
+//   }
+
+//   /* ============================================================
+//      GET SERIAL
+//      ============================================================ */
+
+//   function getSerialLines(item) {
+//     if (!item)
+//       return []
+
+//     if (
+//       Array.isArray(
+//         item.serial
+//       )
+//     ) {
+//       return item.serial
+//     }
+
+//     if (
+//       typeof item.serial ===
+//         'string' &&
+//       item.serial.includes(',')
+//     ) {
+//       return item.serial
+//         .split(',')
+//         .map(
+//           (x) =>
+//             x.trim()
+//         )
+//         .filter(Boolean)
+//     }
+
+//     return item.serial
+//       ? [item.serial]
+//       : []
+//   }
+
+//   /* ============================================================
+//      GROUP SAME PRODUCT
+//      ============================================================ */
+
+//   const groupedItems =
+//     useMemo(() => {
+//       const groups = []
+//       const map = new Map()
+
+//       for (
+//         const item of (
+//           Array.isArray(doc.items)
+//             ? doc.items
+//             : []
+//         )
+//       ) {
+//         const key =
+//           `${item.category || ''}__${item.name || ''}`
+//             .toLowerCase()
+//             .trim()
+
+//         if (!map.has(key)) {
+//           const newGroup = {
+//             stockId:
+//               item.stockId ||
+//               '',
+
+//             name:
+//               item.name ||
+//               '',
+
+//             category:
+//               item.category ||
+//               '',
+
+//             qty: 0,
+
+//             macLines: [],
+
+//             serialLines: []
+//           }
+
+//           map.set(
+//             key,
+//             newGroup
+//           )
+
+//           groups.push(
+//             newGroup
+//           )
+//         }
+
+//         const group =
+//           map.get(key)
+
+//         group.qty +=
+//           Number(item.qty) || 0
+
+//         const macs =
+//           getMacLines(item)
+
+//         macs.forEach(
+//           (mac) => {
+//             if (mac)
+//               group.macLines.push(
+//                 mac
+//               )
+//           }
+//         )
+
+//         const serials =
+//           getSerialLines(item)
+
+//         serials.forEach(
+//           (serial) => {
+//             if (serial)
+//               group.serialLines.push(
+//                 serial
+//               )
+//           }
+//         )
+//       }
+
+//       return groups
+//     }, [doc.items])
+
+//   /* ============================================================
+//      PRINTABLE ITEMS
+//      ============================================================ */
+
+//   const printableItems =
+//     groupedItems.length > 0
+//       ? groupedItems
+//       : [
+//           {
+//             name: '',
+//             qty: '',
+//             macLines: [],
+//             serialLines: []
+//           }
+//         ]
+
+//   /* ============================================================
+//      DYNAMIC COMPANY INFO
+//      ============================================================
+//      Priority:
+//        1. doc.companyLogo / companyName / etc. (saved snapshot)
+//        2. Live company from AuthContext
+//        3. Hard fallback constants
+
+//      This ensures:
+//        - New challans use saved snapshot
+//        - Old challans (before this feature) use live company data
+//        - If company has no logo yet, only then fallback
+//      ============================================================ */
+
+//   const companyName =
+//     doc.companyName ||
+//     company?.name ||
+//     FALLBACK_COMPANY_NAME
+
+//   const companyLogo =
+//     doc.companyLogo ||
+//     company?.logoUrl ||
+//     FALLBACK_COMPANY_LOGO
+
+//   const companyAddress =
+//     doc.companyAddress ||
+//     company?.address ||
+//     FALLBACK_COMPANY_ADDRESS
+
+//   const companyEmail =
+//     doc.companyEmail ||
+//     company?.email ||
+//     FALLBACK_COMPANY_EMAIL
+
+//   const companyPhone =
+//     doc.companyPhone ||
+//     company?.phone ||
+//     FALLBACK_COMPANY_PHONE
+
+//   const customerName =
+//     doc.customer?.name ||
+//     ''
+
+//   const customerCompany =
+//     doc.customer?.company ||
+//     ''
+
+//   const customerAddress =
+//     doc.customer?.address ||
+//     ''
+
+//   const customerPhone =
+//     doc.customer?.phone ||
+//     ''
+
+//   return (
+//     <Modal
+//       title={`${type} — ${
+//         doc.dcNumber || ''
+//       }`}
+//       onClose={onClose}
+//       wide
+//     >
+
+//       <div className="flex gap-3 mb-4 no-print">
+
+//         <button
+//           onClick={handlePrint}
+//           className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-ink text-white text-sm font-medium py-2.5 hover:bg-inkSoft"
+//         >
+
+//           <Printer size={16} />
+
+//           Print / Save as PDF
+
+//         </button>
+
+//         <button
+//           onClick={onClose}
+//           className="px-5 rounded-lg border border-line text-ink text-sm font-medium py-2.5 hover:bg-paper"
+//         >
+
+//           Close
+
+//         </button>
+
+//       </div>
+
+//       <div
+//         ref={printRef}
+//         style={{
+//           background:
+//             '#ffffff',
+
+//           padding: '0',
+
+//           overflow: 'hidden',
+
+//           width: '210mm',
+
+//           margin: '0 auto'
+//         }}
+//       >
+
+//         <div
+//           className="dc-sheet"
+//           style={{
+//             width: '210mm',
+
+//             minHeight:
+//               '297mm',
+
+//             margin:
+//               '0 auto',
+
+//             background:
+//               '#ffffff',
+
+//             padding:
+//               '10mm 8mm 10mm 8mm',
+
+//             boxSizing:
+//               'border-box',
+
+//             color: '#111',
+
+//             fontFamily:
+//               'Arial, Helvetica, sans-serif',
+
+//             overflow: 'hidden'
+//           }}
+//         >
+
+//           {/* TITLE */}
+
+//           <div
+//             className="dc-title"
+//             style={{
+//               textAlign:
+//                 'center',
+
+//               fontSize:
+//                 '18px',
+
+//               lineHeight:
+//                 '1',
+
+//               fontWeight: 700,
+
+//               textDecoration:
+//                 'underline',
+
+//               margin:
+//                 '0 0 3mm 0'
+//             }}
+//           >
+
+//             DELIVERY CHALLAN
+
+//           </div>
+
+//           {/* LOGO */}
+
+//           <img
+//             src={companyLogo}
+//             alt={companyName}
+//             className="dc-logo"
+//             style={{
+//               width: '28mm',
+
+//               height: 'auto',
+
+//               objectFit:
+//                 'contain',
+
+//               display:
+//                 'block',
+
+//               margin:
+//                 '0 0 1mm 0'
+//             }}
+//             onError={(e) => {
+//               // If uploaded logo fails, fall back to default
+//               if (e.currentTarget.src !== window.location.origin + FALLBACK_COMPANY_LOGO) {
+//                 e.currentTarget.src = FALLBACK_COMPANY_LOGO
+//               }
+//             }}
+//           />
+
+//           {/* HEADER */}
+
+//           <div
+//             className="dc-header"
+//             style={{
+//               display:
+//                 'grid',
+
+//               gridTemplateColumns:
+//                 '43% 57%',
+
+//               columnGap:
+//                 '4mm',
+
+//               alignItems:
+//                 'start'
+//             }}
+//           >
+
+//             {/* LEFT */}
+
+//             <div
+//               className="dc-left"
+//               style={{
+//                 fontSize:
+//                   '11px',
+
+//                 lineHeight:
+//                   1.4
+//               }}
+//             >
+
+//               <div
+//                 className="dc-address"
+//                 style={{
+//                   whiteSpace:
+//                     'pre-line',
+
+//                   margin: 0,
+
+//                   padding: 0,
+
+//                   lineHeight:
+//                     1.35
+//                 }}
+//               >
+
+//                 {companyAddress}
+
+//               </div>
+
+//               {companyPhone && (
+//                 <div
+//                   style={{
+//                     marginTop:
+//                       '0.5mm'
+//                   }}
+//                 >
+
+//                   {companyPhone}
+
+//                 </div>
+//               )}
+
+//               {companyEmail && (
+//                 <div
+//                   className="dc-email"
+//                   style={{
+//                     marginTop:
+//                       '0.5mm',
+
+//                     color:
+//                       '#0563c1',
+
+//                     textDecoration:
+//                       'underline'
+//                   }}
+//                 >
+
+//                   {companyEmail}
+
+//                 </div>
+//               )}
+
+//               <div
+//                 className="dc-delivery-to"
+//                 style={{
+//                   marginTop:
+//                     '15.5mm'
+//                 }}
+//               >
+
+//                 <div
+//                   className="dc-label"
+//                   style={{
+//                     fontWeight: 700,
+
+//                     textDecoration:
+//                       'underline'
+//                   }}
+//                 >
+
+//                   Delivery To:
+
+//                 </div>
+
+//                 {customerCompany && (
+//                   <div
+//                     className="dc-delivery-to-name"
+//                     style={{
+//                       fontWeight: 600
+//                     }}
+//                   >
+//                     M/S. {customerCompany}
+//                   </div>
+//                 )}
+
+//                 {!customerCompany && customerName && (
+//                   <div
+//                     className="dc-delivery-to-name"
+//                     style={{
+//                       fontWeight: 600
+//                     }}
+//                   >
+//                     {customerName}
+//                   </div>
+//                 )}
+
+//                 {customerCompany && customerName && customerName !== customerCompany && (
+//                   <div style={{ marginTop: '0.5mm' }}>
+//                     {customerName}
+//                   </div>
+//                 )}
+
+//                 {customerAddress && (
+//                   <div
+//                     style={{
+//                       marginTop:
+//                         '1mm',
+
+//                       fontSize:
+//                         '10px'
+//                     }}
+//                   >
+
+//                     {
+//                       customerAddress
+//                     }
+
+//                   </div>
+//                 )}
+
+//                 {customerPhone && (
+//                   <div
+//                     style={{
+//                       fontSize:
+//                         '10px'
+//                     }}
+//                   >
+
+//                     Phone:{' '}
+//                     {
+//                       customerPhone
+//                     }
+
+//                   </div>
+//                 )}
+
+//               </div>
+
+//             </div>
+
+//             {/* RIGHT INFO BOX */}
+
+//             <div>
+
+//               <div
+//                 className="dc-info-box"
+//                 style={{
+//                   width: '100%',
+
+//                   border:
+//                     '0.6px solid #b8b8b8',
+
+//                   margin: 0
+//                 }}
+//               >
+
+//                 <div
+//                   className="dc-info-row"
+//                   style={{
+//                     display:
+//                       'grid',
+
+//                     gridTemplateColumns:
+//                       '50% 50%',
+
+//                     minHeight:
+//                       '8mm'
+//                   }}
+//                 >
+
+//                   <div
+//                     className="dc-info-cell dc-info-label"
+//                     style={{
+//                       border:
+//                         '0.6px solid #b8b8b8',
+
+//                       display:
+//                         'flex',
+
+//                       alignItems:
+//                         'center',
+
+//                       justifyContent:
+//                         'flex-end',
+
+//                       padding:
+//                         '1.5mm 3mm',
+
+//                       fontSize:
+//                         '10.5px',
+
+//                       fontWeight: 600
+//                     }}
+//                   >
+
+//                     Delivery Challan No:
+
+//                   </div>
+
+//                   <div
+//                     className="dc-info-cell dc-info-value"
+//                     style={{
+//                       border:
+//                         '0.6px solid #b8b8b8',
+
+//                       display:
+//                         'flex',
+
+//                       alignItems:
+//                         'center',
+
+//                       justifyContent:
+//                         'flex-start',
+
+//                       padding:
+//                         '1.5mm 3mm',
+
+//                       fontSize:
+//                         '10.5px',
+
+//                       fontWeight: 600
+//                     }}
+//                   >
+
+//                     {doc.dcNumber}
+
+//                   </div>
+
+//                 </div>
+
+//                 <div
+//                   className="dc-info-row"
+//                   style={{
+//                     display:
+//                       'grid',
+
+//                     gridTemplateColumns:
+//                       '50% 50%',
+
+//                     minHeight:
+//                       '8mm'
+//                   }}
+//                 >
+
+//                   <div
+//                     className="dc-info-cell dc-info-label"
+//                     style={{
+//                       border:
+//                         '0.6px solid #b8b8b8',
+
+//                       display:
+//                         'flex',
+
+//                       alignItems:
+//                         'center',
+
+//                       justifyContent:
+//                         'flex-end',
+
+//                       padding:
+//                         '1.5mm 3mm',
+
+//                       fontSize:
+//                         '10.5px',
+
+//                       fontWeight: 600
+//                     }}
+//                   >
+
+//                     Date:
+
+//                   </div>
+
+//                   <div
+//                     className="dc-info-cell dc-info-value"
+//                     style={{
+//                       border:
+//                         '0.6px solid #b8b8b8',
+
+//                       display:
+//                         'flex',
+
+//                       alignItems:
+//                         'center',
+
+//                       justifyContent:
+//                         'flex-start',
+
+//                       padding:
+//                         '1.5mm 3mm',
+
+//                       fontSize:
+//                         '10.5px',
+
+//                       fontWeight: 600
+//                     }}
+//                   >
+
+//                     {formatDate(
+//                       doc.date
+//                     )}
+
+//                   </div>
+
+//                 </div>
+
+//               </div>
+
+//             </div>
+
+//           </div>
+
+//           {/* PRODUCT TABLE */}
+
+//           <div
+//             className="dc-products"
+//             style={{
+//               marginTop:
+//                 '5mm',
+
+//               width: '100%'
+//             }}
+//           >
+
+//             <table
+//               className="dc-product-table"
+//               style={{
+//                 width: '100%',
+
+//                 borderCollapse:
+//                   'collapse',
+
+//                 tableLayout:
+//                   'fixed',
+
+//                 margin: 0
+//               }}
+//             >
+
+//               <colgroup>
+
+//                 <col style={{ width: '9%' }} />
+//                 <col style={{ width: '30%' }} />
+//                 <col style={{ width: '14%' }} />
+//                 <col style={{ width: '25%' }} />
+//                 <col style={{ width: '22%' }} />
+
+//               </colgroup>
+
+//               <thead>
+
+//                 <tr>
+
+//                   <th
+//                     style={{
+//                       border:
+//                         '0.6px solid #b8b8b8',
+
+//                       padding:
+//                         '1.8mm 2mm',
+
+//                       fontSize:
+//                         '10.5px',
+
+//                       textAlign:
+//                         'center',
+
+//                       fontWeight: 700
+//                     }}
+//                   >
+//                     S.No.
+//                   </th>
+
+//                   <th
+//                     style={{
+//                       border:
+//                         '0.6px solid #b8b8b8',
+
+//                       padding:
+//                         '1.8mm 2mm',
+
+//                       fontSize:
+//                         '10.5px',
+
+//                       textAlign:
+//                         'center',
+
+//                       fontWeight: 700
+//                     }}
+//                   >
+//                     Product Name
+//                   </th>
+
+//                   <th
+//                     style={{
+//                       border:
+//                         '0.6px solid #b8b8b8',
+
+//                       padding:
+//                         '1.8mm 2mm',
+
+//                       fontSize:
+//                         '10.5px',
+
+//                       textAlign:
+//                         'center',
+
+//                       fontWeight: 700
+//                     }}
+//                   >
+//                     Quantity
+//                   </th>
+
+//                   <th
+//                     style={{
+//                       border:
+//                         '0.6px solid #b8b8b8',
+
+//                       padding:
+//                         '1.8mm 2mm',
+
+//                       fontSize:
+//                         '10.5px',
+
+//                       textAlign:
+//                         'center',
+
+//                       fontWeight: 700
+//                     }}
+//                   >
+//                     Mac Address
+//                   </th>
+
+//                   <th
+//                     style={{
+//                       border:
+//                         '0.6px solid #b8b8b8',
+
+//                       padding:
+//                         '1.8mm 2mm',
+
+//                       fontSize:
+//                         '10.5px',
+
+//                       textAlign:
+//                         'center',
+
+//                       fontWeight: 700
+//                     }}
+//                   >
+//                     Serial Number
+//                   </th>
+
+//                 </tr>
+
+//               </thead>
+
+//               <tbody>
+
+//                 {printableItems.map(
+//                   (
+//                     item,
+//                     index
+//                   ) => {
+
+//                     const macLines =
+//                       item.macLines ||
+//                       []
+
+//                     const serialLines =
+//                       item.serialLines ||
+//                       []
+
+//                     const maxLines =
+//                       Math.max(
+//                         1,
+//                         macLines.length,
+//                         serialLines.length
+//                       )
+
+//                     return (
+
+//                       <tr
+//                         key={`${item.name}-${index}`}
+//                       >
+
+//                         <td
+//                           style={{
+//                             border:
+//                               '0.6px solid #b8b8b8',
+
+//                             padding:
+//                               '1.8mm 2mm',
+
+//                             fontSize:
+//                               '10.5px',
+
+//                             textAlign:
+//                               'center',
+
+//                             verticalAlign:
+//                               'top'
+//                           }}
+//                         >
+
+//                           {index + 1}
+
+//                         </td>
+
+//                         <td
+//                           className="dc-product-name"
+//                           style={{
+//                             border:
+//                               '0.6px solid #b8b8b8',
+
+//                             padding:
+//                               '1.8mm 2mm',
+
+//                             fontSize:
+//                               '10.5px',
+
+//                             textAlign:
+//                               'center',
+
+//                             verticalAlign:
+//                               'top',
+
+//                             fontWeight: 500
+//                           }}
+//                         >
+
+//                           {item.name}
+
+//                         </td>
+
+//                         <td
+//                           style={{
+//                             border:
+//                               '0.6px solid #b8b8b8',
+
+//                             padding:
+//                               '1.8mm 2mm',
+
+//                             fontSize:
+//                               '10.5px',
+
+//                             textAlign:
+//                               'center',
+
+//                             verticalAlign:
+//                               'top'
+//                           }}
+//                         >
+
+//                           {item.qty}
+
+//                         </td>
+
+//                         <td
+//                           style={{
+//                             border:
+//                               '0.6px solid #b8b8b8',
+
+//                             padding:
+//                               '1.8mm 2mm',
+
+//                             fontSize:
+//                               '10.5px',
+
+//                             textAlign:
+//                               'center',
+
+//                             verticalAlign:
+//                               'top'
+//                           }}
+//                         >
+
+//                           {Array.from({
+//                             length:
+//                               maxLines
+//                           }).map(
+//                             (
+//                               _,
+//                               macIndex
+//                             ) => (
+
+//                               <div
+//                                 key={`mac-${macIndex}`}
+//                                 className="dc-multi-line"
+//                               >
+
+//                                 {
+//                                   macLines[
+//                                     macIndex
+//                                   ] || ''
+//                                 }
+
+//                               </div>
+
+//                             )
+//                           )}
+
+//                         </td>
+
+//                         <td
+//                           style={{
+//                             border:
+//                               '0.6px solid #b8b8b8',
+
+//                             padding:
+//                               '1.8mm 2mm',
+
+//                             fontSize:
+//                               '10.5px',
+
+//                             textAlign:
+//                               'center',
+
+//                             verticalAlign:
+//                               'top'
+//                           }}
+//                         >
+
+//                           {Array.from({
+//                             length:
+//                               maxLines
+//                           }).map(
+//                             (
+//                               _,
+//                               serialIndex
+//                             ) => (
+
+//                               <div
+//                                 key={`serial-${serialIndex}`}
+//                                 className="dc-multi-line"
+//                               >
+
+//                                 {
+//                                   serialLines[
+//                                     serialIndex
+//                                   ] || ''
+//                                 }
+
+//                               </div>
+
+//                             )
+//                           )}
+
+//                         </td>
+
+//                       </tr>
+
+//                     )
+//                   }
+//                 )}
+
+//               </tbody>
+
+//             </table>
+
+//           </div>
+
+//           {/* SIGNATURES */}
+
+//           <div
+//             className="dc-signatures"
+//             style={{
+//               marginTop:
+//                 '18mm',
+
+//               width: '100%',
+
+//               fontSize:
+//                 '11px'
+//             }}
+//           >
+
+//             <div
+//               className="dc-signature-top"
+//               style={{
+//                 display:
+//                   'grid',
+
+//                 gridTemplateColumns:
+//                   '1fr 1fr',
+
+//                 columnGap:
+//                   '20mm',
+
+//                 marginBottom:
+//                   '7mm'
+//               }}
+//             >
+
+//               <div
+//                 className="dc-signature-heading"
+//                 style={{
+//                   fontWeight: 500,
+
+//                   whiteSpace:
+//                     'nowrap'
+//                 }}
+//               >
+
+//                 Received In Sound Condition By:
+
+//               </div>
+
+//               <div
+//                 className="dc-signature-heading right"
+//                 style={{
+//                   fontWeight: 500,
+
+//                   whiteSpace:
+//                     'nowrap',
+
+//                   textAlign:
+//                     'right'
+//                 }}
+//               >
+
+//                 Delivered By:
+
+//               </div>
+
+//             </div>
+
+//             <div
+//               className="dc-signature-bottom"
+//               style={{
+//                 display:
+//                   'grid',
+
+//                 gridTemplateColumns:
+//                   '1fr 1fr',
+
+//                 columnGap:
+//                   '30mm'
+//               }}
+//             >
+
+//               <div
+//                 className="dc-signature-block"
+//                 style={{
+//                   minHeight:
+//                     '25mm'
+//                 }}
+//               >
+
+//                 <div
+//                   className="dc-signature-name"
+//                   style={{
+//                     fontSize:
+//                       '11px',
+
+//                     marginBottom:
+//                       '2mm'
+//                   }}
+//                 >
+
+//                   Name:
+
+//                 </div>
+
+//                 <div
+//                   className="dc-signature-line"
+//                   style={{
+//                     width: '72mm',
+
+//                     borderBottom:
+//                       '0.7px solid #333'
+//                   }}
+//                 />
+
+//                 <div
+//                   style={{
+//                     marginTop:
+//                       '4mm',
+
+//                     fontSize:
+//                       '10px',
+
+//                     color:
+//                       '#666'
+//                   }}
+//                 >
+
+//                   Signature
+
+//                 </div>
+
+//               </div>
+
+//               <div
+//                 className="dc-signature-block"
+//                 style={{
+//                   minHeight:
+//                     '25mm'
+//                 }}
+//               >
+
+//                 <div
+//                   className="dc-signature-line right"
+//                   style={{
+//                     width: '72mm',
+
+//                     borderBottom:
+//                       '0.7px solid #333',
+
+//                     marginLeft:
+//                       'auto'
+//                   }}
+//                 />
+
+//                 <div
+//                   style={{
+//                     marginTop:
+//                       '4mm',
+
+//                     fontSize:
+//                       '10px',
+
+//                     color:
+//                       '#666',
+
+//                     textAlign:
+//                       'right'
+//                   }}
+//                 >
+
+//                   Signature
+
+//                 </div>
+
+//               </div>
+
+//             </div>
+
+//           </div>
+
+//         </div>
+
+//       </div>
+
+//       <style
+//         dangerouslySetInnerHTML={{
+//           __html: `
+
+// @media print {
+
+//   .no-print {
+//     display: none !important;
+//   }
+
+//   .dc-sheet {
+//     box-shadow: none !important;
+//   }
+
+//   body {
+//     background: #fff !important;
+//   }
+
+// }
+
+// `
+//         }}
+//       />
+
+//     </Modal>
+//   )
+// }
+
+
+
+
+//stamp
+
+// import { useEffect, useMemo, useState, useRef } from 'react'
+// import { ref, push, onValue, update, get, set } from 'firebase/database'
+// import {
+//   Plus,
+//   Trash2,
+//   FileText,
+//   Printer,
+//   Pencil,
+//   Download,
+//   Search,
+//   X,
+//   ArrowUpDown,
+//   Move,
+//   Stamp as StampIcon
+// } from 'lucide-react'
+
+// import { db } from '../firebase'
+// import { useAuth } from '../context/AuthContext'
+// import {
+//   formatDate,
+//   todayISO
+// } from '../utils/helpers'
+
+// import { Modal } from './Customers'
+// import Loader from '../components/Loader'
+
+// /* ============================================================
+//    FALLBACK COMPANY INFORMATION
+//    ============================================================ */
+
+// const FALLBACK_COMPANY_NAME = 'Pearl Networks'
+// const FALLBACK_COMPANY_LOGO = '/PN.png'
+
+// const FALLBACK_COMPANY_ADDRESS = `
+// KCHS, Gohar Chamber, Office # 304,
+// Shahrah-e-Faisal, near Duty Free Shop,
+// Karachi, 75660
+// `
+
+// const FALLBACK_COMPANY_EMAIL = 'info@globalonesystem.com'
+// const FALLBACK_COMPANY_PHONE = ''
+
+// /* ============================================================
+//    DEFAULT STAMP POSITION
+//    ============================================================ */
+
+// const DEFAULT_STAMP = {
+//   x: 62,
+//   y: 72,
+//   width: 16,
+//   height: 16
+// }
+
+// /* ============================================================
+//    DC NUMBER
+//    ============================================================ */
+
+// function getTodayDateString() {
+//   const today = new Date()
+
+//   const year = today.getFullYear()
+//   const month = String(today.getMonth() + 1).padStart(2, '0')
+//   const day = String(today.getDate()).padStart(2, '0')
+
+//   return `${year}${month}${day}`
+// }
+
+// async function getNextDcNumber(companyId) {
+//   try {
+//     const dateStr = getTodayDateString()
+
+//     const counterRef = ref(
+//       db,
+//       `companies/${companyId}/counters/dc`
+//     )
+
+//     const snapshot = await get(counterRef)
+
+//     let lastNumber = 0
+//     let lastDate = ''
+
+//     if (snapshot.exists()) {
+//       const data = snapshot.val()
+
+//       lastNumber = data.number || 0
+//       lastDate = data.date || ''
+//     }
+
+//     let nextNumber = lastNumber + 1
+
+//     if (lastDate !== dateStr) {
+//       nextNumber = 1
+//     }
+
+//     const padded = String(nextNumber).padStart(4, '0')
+
+//     return `DC-${dateStr}-${padded}`
+//   } catch (error) {
+//     console.error(
+//       'Error getting DC number:',
+//       error
+//     )
+
+//     const dateStr = getTodayDateString()
+
+//     const timestamp =
+//       Date.now()
+//         .toString()
+//         .slice(-6)
+
+//     return `DC-${dateStr}-${timestamp}`
+//   }
+// }
+
+// async function incrementDcCounter(companyId) {
+//   try {
+//     const dateStr = getTodayDateString()
+
+//     const counterRef = ref(
+//       db,
+//       `companies/${companyId}/counters/dc`
+//     )
+
+//     const snapshot = await get(counterRef)
+
+//     let lastNumber = 0
+//     let lastDate = ''
+
+//     if (snapshot.exists()) {
+//       const data = snapshot.val()
+
+//       lastNumber = data.number || 0
+//       lastDate = data.date || ''
+//     }
+
+//     let newNumber = lastNumber + 1
+
+//     if (lastDate !== dateStr) {
+//       newNumber = 1
+//     }
+
+//     await set(counterRef, {
+//       date: dateStr,
+//       number: newNumber
+//     })
+
+//     return {
+//       number: newNumber,
+//       date: dateStr
+//     }
+//   } catch (error) {
+//     console.error(
+//       'Error incrementing counter:',
+//       error
+//     )
+
+//     return null
+//   }
+// }
+
+// /* ============================================================
+//    CHECK IF DC NUMBER EXISTS (Not Deleted)
+//    ============================================================ */
+
+// async function checkDcNumberExists(companyId, dcNumber, excludeId = null) {
+//   try {
+//     const challansRef = ref(
+//       db,
+//       `companies/${companyId}/challans`
+//     )
+
+//     const snapshot = await get(challansRef)
+
+//     if (!snapshot.exists()) {
+//       return false
+//     }
+
+//     const challans = snapshot.val()
+
+//     for (const [id, challan] of Object.entries(challans)) {
+//       if (excludeId && id === excludeId) {
+//         continue
+//       }
+
+//       if (challan.dcNumber === dcNumber) {
+//         return true
+//       }
+//     }
+
+//     return false
+//   } catch (error) {
+//     console.error('Error checking DC number:', error)
+//     return false
+//   }
+// }
+
+// /* ============================================================
+//    EMPTY ITEM
+//    ============================================================ */
+
+// const emptyItem = {
+//   stockId: '',
+//   name: '',
+//   category: '',
+//   mac: '',
+//   serial: '',
+//   qty: 1,
+//   available: 0
+// }
+
+// /* ============================================================
+//    MAIN DELIVERY CHALLAN
+//    ============================================================ */
+
+// export default function DeliveryChallan() {
+//   const { companyId, company } = useAuth()
+
+//   /* ============================================================
+//      DYNAMIC COMPANY INFO (with fallback)
+//      ============================================================ */
+
+//   const companyName =
+//     company?.name ||
+//     FALLBACK_COMPANY_NAME
+
+//   const companyLogo =
+//     company?.logoUrl ||
+//     FALLBACK_COMPANY_LOGO
+
+//   const companyAddress =
+//     company?.address ||
+//     FALLBACK_COMPANY_ADDRESS
+
+//   const companyEmail =
+//     company?.email ||
+//     FALLBACK_COMPANY_EMAIL
+
+//   const companyPhone =
+//     company?.phone ||
+//     FALLBACK_COMPANY_PHONE
+
+//   /* ============================================================
+//      STAMP FROM COMPANY PROFILE
+//      ============================================================ */
+
+//   const companyStamp =
+//     company?.stampUrl ||
+//     company?.stamp ||
+//     ''
+
+//   const [customers, setCustomers] = useState(null)
+//   const [stock, setStock] = useState(null)
+//   const [challans, setChallans] = useState(null)
+
+//   const [showForm, setShowForm] = useState(false)
+//   const [preview, setPreview] = useState(null)
+//   const [editingChallan, setEditingChallan] = useState(null)
+
+//   const [customerId, setCustomerId] = useState('')
+
+//   const [customerSearch, setCustomerSearch] = useState('')
+//   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
+
+//   const [dcNumber, setDcNumber] = useState('')
+//   const [dcDate, setDcDate] = useState(todayISO())
+
+//   const [items, setItems] = useState([])
+
+//   const [stockSearch, setStockSearch] = useState('')
+//   const [selectedStockIds, setSelectedStockIds] = useState([])
+
+//   const [pickQty, setPickQty] = useState(1)
+
+//   /* ============================================================
+//      STAMP CHECKBOX
+//      ============================================================ */
+
+//   const [applyStamp, setApplyStamp] = useState(false)
+
+//   const [saving, setSaving] = useState(false)
+//   const [error, setError] = useState('')
+//   const [dcNumberError, setDcNumberError] = useState('')
+
+//   const [searchTerm, setSearchTerm] = useState('')
+
+//   const [sortBy, setSortBy] = useState('date-desc')
+
+//   /* ============================================================
+//      LOAD DATA
+//      ============================================================ */
+
+//   useEffect(() => {
+//     if (!companyId) return
+
+//     const customersRef = ref(
+//       db,
+//       `companies/${companyId}/customers`
+//     )
+
+//     const stockRef = ref(
+//       db,
+//       `companies/${companyId}/stock`
+//     )
+
+//     const challansRef = ref(
+//       db,
+//       `companies/${companyId}/challans`
+//     )
+
+//     const unsubCustomers = onValue(
+//       customersRef,
+//       (snap) => {
+//         const value = snap.val() || {}
+
+//         const list = Object.entries(value).map(
+//           ([id, customer]) => ({
+//             id,
+//             ...customer
+//           })
+//         )
+
+//         setCustomers(list)
+//       },
+//       (err) => {
+//         console.error(
+//           'customers read failed:',
+//           err
+//         )
+
+//         setCustomers([])
+//       }
+//     )
+
+//     const unsubStock = onValue(
+//       stockRef,
+//       (snap) => {
+//         const value = snap.val() || {}
+
+//         const list = Object.entries(value).map(
+//           ([id, stockItem]) => ({
+//             id,
+//             ...stockItem
+//           })
+//         )
+
+//         setStock(list)
+//       },
+//       (err) => {
+//         console.error(
+//           'stock read failed:',
+//           err
+//         )
+
+//         setStock([])
+//       }
+//     )
+
+//     const unsubChallans = onValue(
+//       challansRef,
+//       (snap) => {
+//         const value = snap.val() || {}
+
+//         const list = Object.entries(value)
+//           .map(
+//             ([id, challan]) => ({
+//               id,
+//               ...challan
+//             })
+//           )
+
+//         setChallans(list)
+//       },
+//       (err) => {
+//         console.error(
+//           'challans read failed:',
+//           err
+//         )
+
+//         setChallans([])
+//       }
+//     )
+
+//     return () => {
+//       unsubCustomers()
+//       unsubStock()
+//       unsubChallans()
+//     }
+//   }, [companyId])
+
+//   /* ============================================================
+//      SET CUSTOMER SEARCH TEXT
+//      ============================================================ */
+
+//   useEffect(() => {
+//     if (!editingChallan) return
+//     if (!customers) return
+
+//     const selectedCustomer =
+//       customers.find(
+//         (c) => c.id === customerId
+//       )
+
+//     if (selectedCustomer) {
+//       setCustomerSearch(
+//         `${selectedCustomer.name || ''}${
+//           selectedCustomer.company
+//             ? ` — ${selectedCustomer.company}`
+//             : ''
+//         }`
+//       )
+//     }
+//   }, [
+//     customers,
+//     customerId,
+//     editingChallan
+//   ])
+
+//   /* ============================================================
+//      FILTERED + SORTED CHALLANS
+//      ============================================================ */
+
+//   const filteredChallans = useMemo(() => {
+//     if (!challans) return []
+
+//     const search = searchTerm.trim().toLowerCase()
+
+//     let result = challans
+
+//     if (search) {
+//       result = challans.filter((challan) => {
+//         if (
+//           challan.dcNumber &&
+//           challan.dcNumber.toLowerCase().includes(search)
+//         ) {
+//           return true
+//         }
+
+//         if (
+//           challan.customerName &&
+//           challan.customerName.toLowerCase().includes(search)
+//         ) {
+//           return true
+//         }
+
+//         if (
+//           challan.customerCompany &&
+//           challan.customerCompany.toLowerCase().includes(search)
+//         ) {
+//           return true
+//         }
+
+//         if (
+//           challan.date &&
+//           formatDate(challan.date).toLowerCase().includes(search)
+//         ) {
+//           return true
+//         }
+
+//         return false
+//       })
+//     }
+
+//     const sorted = [...result]
+
+//     switch (sortBy) {
+//       case 'date-asc':
+//         sorted.sort((a, b) => {
+//           const dateA = new Date(a.date || 0).getTime()
+//           const dateB = new Date(b.date || 0).getTime()
+//           if (dateA !== dateB) return dateA - dateB
+//           return (a.createdAt || 0) - (b.createdAt || 0)
+//         })
+//         break
+
+//       case 'items-desc':
+//         sorted.sort((a, b) => {
+//           const itemsA = a.items?.length || 0
+//           const itemsB = b.items?.length || 0
+//           if (itemsB !== itemsA) return itemsB - itemsA
+//           return (b.createdAt || 0) - (a.createdAt || 0)
+//         })
+//         break
+
+//       case 'items-asc':
+//         sorted.sort((a, b) => {
+//           const itemsA = a.items?.length || 0
+//           const itemsB = b.items?.length || 0
+//           if (itemsA !== itemsB) return itemsA - itemsB
+//           return (b.createdAt || 0) - (a.createdAt || 0)
+//         })
+//         break
+
+//       case 'date-desc':
+//       default:
+//         sorted.sort((a, b) => {
+//           const dateA = new Date(a.date || 0).getTime()
+//           const dateB = new Date(b.date || 0).getTime()
+//           if (dateA !== dateB) return dateB - dateA
+//           return (b.createdAt || 0) - (a.createdAt || 0)
+//         })
+//         break
+//     }
+
+//     return sorted
+//   }, [challans, searchTerm, sortBy])
+
+//   /* ============================================================
+//      VALIDATE DC NUMBER
+//      ============================================================ */
+
+//   const validateDcNumber = async (number) => {
+//     if (!number || number.trim() === '') {
+//       setDcNumberError('DC Number is required')
+//       return false
+//     }
+
+//     const dcPattern = /^DC-\d{8}-\d{4}$/
+//     if (!dcPattern.test(number)) {
+//       setDcNumberError('Invalid format. Use DC-YYYYMMDD-0001')
+//       return false
+//     }
+
+//     setDcNumberError('')
+//     return true
+//   }
+
+//   /* ============================================================
+//      AVAILABLE STOCK
+//      ============================================================ */
+
+//   const availableStock = useMemo(() => {
+//     if (!stock) return []
+
+//     const selectedIds = new Set(
+//       items
+//         .map((item) => item.stockId)
+//         .filter(Boolean)
+//     )
+
+//     return stock.filter((s) => {
+//       if (selectedIds.has(s.id)) {
+//         return false
+//       }
+
+//       const status =
+//         String(s.status || '')
+//           .toLowerCase()
+//           .trim()
+
+//       const stockType =
+//         String(s.stockType || '')
+//           .toLowerCase()
+//           .trim()
+
+//       const type =
+//         String(s.type || '')
+//           .toLowerCase()
+//           .trim()
+
+//       const isDemoProduct =
+//         status === 'demo' ||
+//         stockType === 'demo' ||
+//         type === 'demo' ||
+//         s.demo === true ||
+//         s.isDemo === true ||
+//         s.isDemoProduct === true
+
+//       if (isDemoProduct) {
+//         return false
+//       }
+
+//       if (status === 'sold') {
+//         return false
+//       }
+
+//       const isSerialized =
+//         !!s.mac ||
+//         !!s.serial
+
+//       if (isSerialized) {
+//         return true
+//       }
+
+//       const quantity =
+//         Number(s.quantity) || 0
+
+//       return quantity > 0
+//     })
+//   }, [stock, items])
+
+//   /* ============================================================
+//      SEARCHED STOCK
+//      ============================================================ */
+
+//   const filteredAvailableStock = useMemo(() => {
+//     const search =
+//       stockSearch
+//         .toLowerCase()
+//         .trim()
+
+//     if (!search) {
+//       return availableStock
+//     }
+
+//     return availableStock.filter((s) => {
+//       const name =
+//         String(s.name || '')
+//           .toLowerCase()
+
+//       const category =
+//         String(s.category || '')
+//           .toLowerCase()
+
+//       const mac =
+//         String(s.mac || '')
+//           .toLowerCase()
+
+//       const serial =
+//         String(s.serial || '')
+//           .toLowerCase()
+
+//       return (
+//         name.includes(search) ||
+//         category.includes(search) ||
+//         mac.includes(search) ||
+//         serial.includes(search)
+//       )
+//     })
+//   }, [
+//     availableStock,
+//     stockSearch
+//   ])
+
+//   /* ============================================================
+//      FILTERED CUSTOMERS
+//      ============================================================ */
+
+//   const filteredCustomers = useMemo(() => {
+//     if (!customers) return []
+
+//     const search =
+//       customerSearch
+//         .toLowerCase()
+//         .trim()
+
+//     if (!search) {
+//       return customers
+//     }
+
+//     return customers.filter(
+//       (customer) => {
+//         const name =
+//           String(
+//             customer.name || ''
+//           ).toLowerCase()
+
+//         const companyName =
+//           String(
+//             customer.company || ''
+//           ).toLowerCase()
+
+//         const phone =
+//           String(
+//             customer.phone || ''
+//           ).toLowerCase()
+
+//         const address =
+//           String(
+//             customer.address || ''
+//           ).toLowerCase()
+
+//         return (
+//           name.includes(search) ||
+//           companyName.includes(search) ||
+//           phone.includes(search) ||
+//           address.includes(search)
+//         )
+//       }
+//     )
+//   }, [
+//     customers,
+//     customerSearch
+//   ])
+
+//   /* ============================================================
+//      RESET FORM
+//      ============================================================ */
+
+//   function resetForm() {
+//     setCustomerId('')
+
+//     setCustomerSearch('')
+//     setShowCustomerDropdown(false)
+
+//     setDcNumber('')
+//     setDcDate(todayISO())
+
+//     setItems([])
+
+//     setStockSearch('')
+//     setSelectedStockIds([])
+
+//     setPickQty(1)
+
+//     setApplyStamp(false)
+
+//     setError('')
+//     setDcNumberError('')
+//     setEditingChallan(null)
+//   }
+
+//   /* ============================================================
+//      NEW CHALLAN
+//      ============================================================ */
+
+//   const openNewChallan = async () => {
+//     resetForm()
+
+//     setDcDate(todayISO())
+
+//     if (companyId) {
+//       const number =
+//         await getNextDcNumber(
+//           companyId
+//         )
+
+//       setDcNumber(number)
+//     }
+
+//     setShowForm(true)
+//   }
+
+//   /* ============================================================
+//      CUSTOMER SELECT
+//      ============================================================ */
+
+//   function selectCustomer(customer) {
+//     setCustomerId(customer.id)
+
+//     setCustomerSearch(
+//       `${customer.name || ''}${
+//         customer.company
+//           ? ` — ${customer.company}`
+//           : ''
+//       }`
+//     )
+
+//     setShowCustomerDropdown(false)
+
+//     setError('')
+//   }
+
+//   /* ============================================================
+//      CLEAR CUSTOMER
+//      ============================================================ */
+
+//   function clearCustomer() {
+//     if (editingChallan) return
+
+//     setCustomerId('')
+//     setCustomerSearch('')
+//     setShowCustomerDropdown(true)
+//   }
+
+//   /* ============================================================
+//      EDIT CHALLAN
+//      ============================================================ */
+
+//   function openEditChallan(challan) {
+//     setError('')
+//     setDcNumberError('')
+
+//     setEditingChallan(challan)
+
+//     setCustomerId(
+//       challan.customerId || ''
+//     )
+
+//     const editCustomer =
+//       customers?.find(
+//         (c) =>
+//           c.id ===
+//           challan.customerId
+//       )
+
+//     setCustomerSearch(
+//       editCustomer
+//         ? `${editCustomer.name || ''}${
+//             editCustomer.company
+//               ? ` — ${editCustomer.company}`
+//               : ''
+//           }`
+//         : challan.customerName || challan.customerCompany || ''
+//     )
+
+//     setShowCustomerDropdown(false)
+
+//     setDcNumber(
+//       challan.dcNumber || ''
+//     )
+
+//     setDcDate(
+//       challan.date ||
+//       todayISO()
+//     )
+
+//     /* Restore stamp checkbox */
+//     setApplyStamp(challan.applyStamp === true)
+
+//     const oldItems =
+//       Array.isArray(
+//         challan.items
+//       )
+//         ? challan.items.map(
+//             (item) => ({
+//               stockId:
+//                 item.stockId || '',
+
+//               name:
+//                 item.name || '',
+
+//               category:
+//                 item.category || '',
+
+//               mac:
+//                 item.mac || '',
+
+//               serial:
+//                 item.serial || '',
+
+//               qty:
+//                 Number(item.qty) || 1,
+
+//               available:
+//                 Number(
+//                   item.available
+//                 ) || 0
+//             })
+//           )
+//         : []
+
+//     setItems(oldItems)
+
+//     setStockSearch('')
+//     setSelectedStockIds([])
+//     setPickQty(1)
+
+//     setShowForm(true)
+//   }
+
+//   /* ============================================================
+//      DELETE CHALLAN
+//      ============================================================ */
+
+//   async function handleDeleteChallan(id) {
+//     if (
+//       !confirm(
+//         'Are you sure you want to delete this Delivery Challan?'
+//       )
+//     ) {
+//       return
+//     }
+
+//     try {
+//       const challanRef = ref(
+//         db,
+//         `companies/${companyId}/challans/${id}`
+//       )
+
+//       const snap =
+//         await get(challanRef)
+
+//       if (!snap.exists()) {
+//         setError(
+//           'Challan not found'
+//         )
+
+//         return
+//       }
+
+//       const challan =
+//         snap.val()
+
+//       const oldItems =
+//         challan.items || []
+
+//       const updates = {}
+
+//       for (
+//         const item of oldItems
+//       ) {
+//         if (!item.stockId)
+//           continue
+
+//         const stockRef =
+//           ref(
+//             db,
+//             `companies/${companyId}/stock/${item.stockId}`
+//           )
+
+//         const stockSnap =
+//           await get(stockRef)
+
+//         if (
+//           !stockSnap.exists()
+//         ) {
+//           continue
+//         }
+
+//         const stockItem =
+//           stockSnap.val()
+
+//         if (
+//           stockItem.mac ||
+//           stockItem.serial ||
+//           item.mac ||
+//           item.serial
+//         ) {
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/status`
+//           ] = 'available'
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/soldTo`
+//           ] = null
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/soldToId`
+//           ] = null
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/soldDate`
+//           ] = null
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/dcNumber`
+//           ] = null
+//         } else {
+//           const currentQty =
+//             Number(
+//               stockItem.quantity
+//             ) || 0
+
+//           const restoredQty =
+//             currentQty +
+//             (Number(item.qty) || 0)
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/quantity`
+//           ] = restoredQty
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/status`
+//           ] = 'available'
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/soldTo`
+//           ] = null
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/soldToId`
+//           ] = null
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/soldDate`
+//           ] = null
+
+//           updates[
+//             `companies/${companyId}/stock/${item.stockId}/dcNumber`
+//           ] = null
+//         }
+//       }
+
+//       updates[
+//         `companies/${companyId}/challans/${id}`
+//       ] = null
+
+//       await update(
+//         ref(db),
+//         updates
+//       )
+//     } catch (err) {
+//       console.error(
+//         'Delete error:',
+//         err
+//       )
+
+//       setError(
+//         'Failed to delete challan'
+//       )
+//     }
+//   }
+
+//   /* ============================================================
+//      TOGGLE STOCK CHECKBOX
+//      ============================================================ */
+
+//   function toggleStockSelection(
+//     stockId
+//   ) {
+//     setSelectedStockIds(
+//       (prev) => {
+//         if (
+//           prev.includes(stockId)
+//         ) {
+//           return prev.filter(
+//             (id) =>
+//               id !== stockId
+//           )
+//         }
+
+//         return [
+//           ...prev,
+//           stockId
+//         ]
+//       }
+//     )
+//   }
+
+//   /* ============================================================
+//      SELECT ALL FILTERED
+//      ============================================================ */
+
+//   function selectAllFiltered() {
+//     const filteredIds =
+//       filteredAvailableStock.map(
+//         (s) => s.id
+//       )
+
+//     setSelectedStockIds(
+//       (prev) => {
+//         const merged =
+//           new Set([
+//             ...prev,
+//             ...filteredIds
+//           ])
+
+//         return Array.from(
+//           merged
+//         )
+//       }
+//     )
+//   }
+
+//   /* ============================================================
+//      CLEAR SELECTION
+//      ============================================================ */
+
+//   function clearSelection() {
+//     setSelectedStockIds([])
+//   }
+
+//   /* ============================================================
+//      ADD SELECTED ITEMS
+//      ============================================================ */
+
+//   function addSelectedItems() {
+//     if (
+//       !stock ||
+//       selectedStockIds.length === 0
+//     ) {
+//       setError(
+//         'Kam az kam aik product select karein.'
+//       )
+
+//       return
+//     }
+
+//     const newItems = []
+//     const skipped = []
+
+//     for (
+//       const stockId of selectedStockIds
+//     ) {
+//       const selectedStock =
+//         stock.find(
+//           (s) =>
+//             s.id === stockId
+//         )
+
+//       if (!selectedStock)
+//         continue
+
+//       const alreadyAdded =
+//         items.some(
+//           (item) =>
+//             item.stockId ===
+//             selectedStock.id
+//         )
+
+//       if (alreadyAdded) {
+//         skipped.push(
+//           selectedStock.name ||
+//             'Product'
+//         )
+
+//         continue
+//       }
+
+//       const status =
+//         String(
+//           selectedStock.status ||
+//             ''
+//         )
+//           .toLowerCase()
+//           .trim()
+
+//       const stockType =
+//         String(
+//           selectedStock.stockType ||
+//             ''
+//         )
+//           .toLowerCase()
+//           .trim()
+
+//       const type =
+//         String(
+//           selectedStock.type ||
+//             ''
+//         )
+//           .toLowerCase()
+//           .trim()
+
+//       const isDemoProduct =
+//         status === 'demo' ||
+//         stockType === 'demo' ||
+//         type === 'demo' ||
+//         selectedStock.demo ===
+//           true ||
+//         selectedStock.isDemo ===
+//           true ||
+//         selectedStock.isDemoProduct ===
+//           true
+
+//       if (isDemoProduct) {
+//         skipped.push(
+//           selectedStock.name ||
+//             'Demo product'
+//         )
+
+//         continue
+//       }
+
+//       if (status === 'sold') {
+//         skipped.push(
+//           selectedStock.name ||
+//             'Sold product'
+//         )
+
+//         continue
+//       }
+
+//       const isSerialized =
+//         !!selectedStock.mac ||
+//         !!selectedStock.serial
+
+//       let qty = 1
+
+//       if (!isSerialized) {
+//         const available =
+//           Math.max(
+//             1,
+//             Number(
+//               selectedStock.quantity
+//             ) || 1
+//           )
+
+//         qty = Math.min(
+//           1,
+//           available
+//         )
+//       }
+
+//       newItems.push({
+//         stockId:
+//           selectedStock.id,
+
+//         name:
+//           selectedStock.name ||
+//           '',
+
+//         category:
+//           selectedStock.category ||
+//           '',
+
+//         mac:
+//           selectedStock.mac ||
+//           '',
+
+//         serial:
+//           selectedStock.serial ||
+//           '',
+
+//         qty,
+
+//         available:
+//           Number(
+//             selectedStock.quantity
+//           ) || 0
+//       })
+//     }
+
+//     if (
+//       newItems.length === 0
+//     ) {
+//       setError(
+//         'Selected products add nahi ho sake.'
+//       )
+
+//       return
+//     }
+
+//     setItems(
+//       (prev) => [
+//         ...prev,
+//         ...newItems
+//       ]
+//     )
+
+//     setSelectedStockIds([])
+//     setStockSearch('')
+//     setPickQty(1)
+//     setError('')
+//   }
+
+//   /* ============================================================
+//      ADD SINGLE ITEM
+//      ============================================================ */
+
+//   function addItem(stockId) {
+//     if (!stock) return
+
+//     const selectedStock =
+//       stock.find(
+//         (s) =>
+//           s.id === stockId
+//       )
+
+//     if (!selectedStock)
+//       return
+
+//     const alreadyAdded =
+//       items.some(
+//         (item) =>
+//           item.stockId ===
+//           selectedStock.id
+//       )
+
+//     if (alreadyAdded) {
+//       setError(
+//         'Ye product already list mein hai.'
+//       )
+
+//       return
+//     }
+
+//     const status =
+//       String(
+//         selectedStock.status ||
+//           ''
+//       )
+//         .toLowerCase()
+//         .trim()
+
+//     const stockType =
+//       String(
+//         selectedStock.stockType ||
+//           ''
+//       )
+//         .toLowerCase()
+//         .trim()
+
+//     const type =
+//       String(
+//         selectedStock.type ||
+//           ''
+//       )
+//         .toLowerCase()
+//         .trim()
+
+//     const isDemoProduct =
+//       status === 'demo' ||
+//       stockType === 'demo' ||
+//       type === 'demo' ||
+//       selectedStock.demo ===
+//         true ||
+//       selectedStock.isDemo ===
+//         true ||
+//       selectedStock.isDemoProduct ===
+//         true
+
+//     if (isDemoProduct) {
+//       setError(
+//         'Demo product Delivery Challan mein add nahi kiya ja sakta.'
+//       )
+
+//       return
+//     }
+
+//     const isSerialized =
+//       !!selectedStock.mac ||
+//       !!selectedStock.serial
+
+//     let qty = 1
+
+//     if (!isSerialized) {
+//       qty = Math.min(
+//         Math.max(
+//           1,
+//           Number(pickQty) || 1
+//         ),
+//         Math.max(
+//           1,
+//           Number(
+//             selectedStock.quantity
+//           ) || 1
+//         )
+//       )
+//     }
+
+//     setItems(
+//       (prev) => [
+//         ...prev,
+//         {
+//           stockId:
+//             selectedStock.id,
+
+//           name:
+//             selectedStock.name ||
+//             '',
+
+//           category:
+//             selectedStock.category ||
+//             '',
+
+//           mac:
+//             selectedStock.mac ||
+//             '',
+
+//           serial:
+//             selectedStock.serial ||
+//             '',
+
+//           qty,
+
+//           available:
+//             Number(
+//               selectedStock.quantity
+//             ) || 0
+//         }
+//       ]
+//     )
+
+//     setSelectedStockIds([])
+//     setStockSearch('')
+//     setPickQty(1)
+//     setError('')
+//   }
+
+//   /* ============================================================
+//      REMOVE ITEM
+//      ============================================================ */
+
+//   function removeItem(stockId) {
+//     setItems(
+//       (prev) =>
+//         prev.filter(
+//           (item) =>
+//             item.stockId !==
+//             stockId
+//         )
+//     )
+//   }
+
+//   /* ============================================================
+//      CHANGE QTY
+//      ============================================================ */
+
+//   function changeItemQty(
+//     stockId,
+//     value
+//   ) {
+//     const stockItem =
+//       stock?.find(
+//         (s) =>
+//           s.id === stockId
+//       )
+
+//     if (!stockItem) return
+
+//     const currentQty =
+//       Number(value) || 1
+
+//     const maxQty =
+//       Number(
+//         stockItem.quantity
+//       ) || 1
+
+//     const isSerialized =
+//       !!stockItem.mac ||
+//       !!stockItem.serial
+
+//     const finalQty =
+//       isSerialized
+//         ? 1
+//         : Math.min(
+//             Math.max(
+//               1,
+//               currentQty
+//             ),
+//             maxQty
+//           )
+
+//     setItems(
+//       (prev) =>
+//         prev.map(
+//           (item) =>
+//             item.stockId ===
+//             stockId
+//               ? {
+//                   ...item,
+//                   qty:
+//                     finalQty
+//                 }
+//               : item
+//         )
+//     )
+//   }
+
+//   /* ============================================================
+//      RESTORE OLD STOCK
+//      ============================================================ */
+
+//   async function restoreOldStock(
+//     oldItems
+//   ) {
+//     if (!oldItems?.length)
+//       return {}
+
+//     const updates = {}
+
+//     for (
+//       const item of oldItems
+//     ) {
+//       if (!item.stockId)
+//         continue
+
+//       const stockRef =
+//         ref(
+//           db,
+//           `companies/${companyId}/stock/${item.stockId}`
+//         )
+
+//       const snap =
+//         await get(stockRef)
+
+//       if (!snap.exists())
+//         continue
+
+//       const stockItem =
+//         snap.val()
+
+//       if (
+//         stockItem.mac ||
+//         stockItem.serial ||
+//         item.mac ||
+//         item.serial
+//       ) {
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/status`
+//         ] = 'available'
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldTo`
+//         ] = null
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldToId`
+//         ] = null
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldDate`
+//         ] = null
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/dcNumber`
+//         ] = null
+//       } else {
+//         const currentQty =
+//           Number(
+//             stockItem.quantity
+//           ) || 0
+
+//         const restoredQty =
+//           currentQty +
+//           (Number(item.qty) || 0)
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/quantity`
+//         ] = restoredQty
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/status`
+//         ] = 'available'
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldTo`
+//         ] = null
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldToId`
+//         ] = null
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldDate`
+//         ] = null
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/dcNumber`
+//         ] = null
+//       }
+//     }
+
+//     return updates
+//   }
+
+//   /* ============================================================
+//      DEDUCT STOCK
+//      ============================================================ */
+
+//   async function deductStock(
+//     newItems,
+//     customer,
+//     customerId,
+//     dcNumber,
+//     date
+//   ) {
+//     const updates = {}
+
+//     for (
+//       const item of newItems
+//     ) {
+//       if (!item.stockId)
+//         continue
+
+//       const stockRef =
+//         ref(
+//           db,
+//           `companies/${companyId}/stock/${item.stockId}`
+//         )
+
+//       const snap =
+//         await get(stockRef)
+
+//       if (!snap.exists())
+//         continue
+
+//       const stockItem =
+//         snap.val()
+
+//       if (
+//         stockItem.mac ||
+//         stockItem.serial
+//       ) {
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/status`
+//         ] = 'sold'
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldTo`
+//         ] = customer.name || customer.company || ''
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldToId`
+//         ] = customerId
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldDate`
+//         ] = date
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/dcNumber`
+//         ] = dcNumber
+//       } else {
+//         const currentQty =
+//           Number(
+//             stockItem.quantity
+//           ) || 0
+
+//         const requestedQty =
+//           Number(item.qty) || 0
+
+//         if (
+//           requestedQty >
+//           currentQty
+//         ) {
+//           throw new Error(
+//             `Stock kam hai: ${item.name}`
+//           )
+//         }
+
+//         const newQty =
+//           Math.max(
+//             0,
+//             currentQty -
+//               requestedQty
+//           )
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/quantity`
+//         ] = newQty
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldDate`
+//         ] = date
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldTo`
+//         ] = customer.name || customer.company || ''
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/soldToId`
+//         ] = customerId
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/dcNumber`
+//         ] = dcNumber
+
+//         updates[
+//           `companies/${companyId}/stock/${item.stockId}/status`
+//         ] =
+//           newQty === 0
+//             ? 'sold'
+//             : 'available'
+//       }
+//     }
+
+//     return updates
+//   }
+
+//   /* ============================================================
+//      SUBMIT
+//      ============================================================ */
+
+//   async function handleSubmit(e) {
+//     e.preventDefault()
+
+//     setError('')
+//     setDcNumberError('')
+
+//     if (
+//       !customerId ||
+//       items.length === 0
+//     ) {
+//       setError(
+//         'Customer aur kam az kam aik product select karein.'
+//       )
+
+//       return
+//     }
+
+//     if (!customers) {
+//       setError(
+//         'Customers load nahi hue.'
+//       )
+
+//       return
+//     }
+
+//     const customer =
+//       customers.find(
+//         (c) =>
+//           c.id === customerId
+//       )
+
+//     if (!customer) {
+//       setError(
+//         'Customer nahi mila.'
+//       )
+
+//       return
+//     }
+
+//     const isDcValid = await validateDcNumber(dcNumber)
+//     if (!isDcValid) {
+//       return
+//     }
+
+//     setSaving(true)
+
+//     try {
+//       const date =
+//         editingChallan?.date ||
+//         dcDate ||
+//         todayISO()
+
+//       let finalDcNumber =
+//         dcNumber
+
+//       if (!editingChallan) {
+//         await incrementDcCounter(
+//           companyId
+//         )
+
+//         if (
+//           !finalDcNumber ||
+//           finalDcNumber.trim() === ''
+//         ) {
+//           const dateStr =
+//             getTodayDateString()
+
+//           const timestamp =
+//             Date.now()
+//               .toString()
+//               .slice(-6)
+
+//           finalDcNumber =
+//             `DC-${dateStr}-${timestamp}`
+
+//           setDcNumber(
+//             finalDcNumber
+//           )
+//         }
+//       }
+
+//       /* ========================================================
+//          EDIT CHALLAN
+//          ======================================================== */
+
+//       if (editingChallan) {
+//         const restoreUpdates =
+//           await restoreOldStock(
+//             editingChallan.items ||
+//               []
+//           )
+
+//         const deductUpdates =
+//           await deductStock(
+//             items,
+//             customer,
+//             customerId,
+//             finalDcNumber,
+//             date          )
+
+//         const allUpdates = {
+//           ...restoreUpdates,
+//           ...deductUpdates,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/dcNumber`]:
+//             finalDcNumber,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/date`]:
+//             date,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/customerId`]:
+//             customerId,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/customerName`]:
+//             customer.name || '',
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/customerCompany`]:
+//             customer.company || '',
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/customerPhone`]:
+//             customer.phone || '',
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/customerAddress`]:
+//             customer.address || '',
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/companyName`]:
+//             companyName,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/companyLogo`]:
+//             companyLogo,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/companyAddress`]:
+//             companyAddress,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/companyEmail`]:
+//             companyEmail,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/companyPhone`]:
+//             companyPhone,
+
+//           /* ====================================================
+//              STAMP — save stampUrl & position
+//              ==================================================== */
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/applyStamp`]:
+//             applyStamp,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/stampUrl`]:
+//             applyStamp ? (companyStamp || '') : '',
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/stampPos`]:
+//             applyStamp && editingChallan
+//               ? (editingChallan.stampPos || null)
+//               : null,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/items`]:
+//             items,
+
+//           [`companies/${companyId}/challans/${editingChallan.id}/updatedAt`]:
+//             Date.now()
+//         }
+
+//         await update(
+//           ref(db),
+//           allUpdates
+//         )
+
+//         setPreview({
+//           id: editingChallan.id,
+
+//           dcNumber:
+//             finalDcNumber,
+
+//           date,
+
+//           customerId,
+
+//           customer,
+
+//           items,
+
+//           applyStamp,
+
+//           stampUrl: applyStamp ? (companyStamp || '') : '',
+
+//           stampPos: applyStamp
+//             ? (editingChallan.stampPos || null)
+//             : null,
+
+//           companyName,
+//           companyLogo,
+//           companyAddress,
+//           companyEmail,
+//           companyPhone
+//         })
+
+//         setShowForm(false)
+
+//         resetForm()
+
+//         return
+//       }
+
+//       /* ========================================================
+//          NEW CHALLAN
+//          ======================================================== */
+
+//       const challansRef =
+//         ref(
+//           db,
+//           `companies/${companyId}/challans`
+//         )
+
+//       const newRef =
+//         await push(
+//           challansRef,
+//           {
+//             dcNumber:
+//               finalDcNumber,
+
+//             date,
+
+//             customerId,
+
+//             customerName:
+//               customer.name || '',
+
+//             customerCompany:
+//               customer.company || '',
+
+//             customerPhone:
+//               customer.phone || '',
+
+//             customerAddress:
+//               customer.address || '',
+
+//             companyName,
+//             companyLogo,
+//             companyAddress,
+//             companyEmail,
+//             companyPhone,
+
+//             /* ====================================================
+//                STAMP
+//                ==================================================== */
+
+//             applyStamp,
+
+//             stampUrl: applyStamp ? (companyStamp || '') : '',
+
+//             stampPos: null,
+
+//             items,
+
+//             createdAt:
+//               Date.now()
+//           }
+//         )
+
+//       const updates =
+//         await deductStock(
+//           items,
+//           customer,
+//           customerId,
+//           finalDcNumber,
+//           date
+//         )
+
+//       await update(
+//         ref(db),
+//         updates
+//       )
+
+//       setPreview({
+//         id: newRef.key,
+
+//         dcNumber:
+//           finalDcNumber,
+
+//         date,
+
+//         customerId,
+
+//         customer,
+
+//         items,
+
+//         applyStamp,
+
+//         stampUrl: applyStamp ? (companyStamp || '') : '',
+
+//         stampPos: null,
+
+//         companyName,
+//         companyLogo,
+//         companyAddress,
+//         companyEmail,
+//         companyPhone
+//       })
+
+//       setShowForm(false)
+
+//       resetForm()
+//     } catch (err) {
+//       console.error(
+//         'Challan save/update failed:',
+//         err
+//       )
+
+//       setError(
+//         err?.message ||
+//           'Challan save nahi ho saka. Dobara koshish karein.'
+//       )
+//     } finally {
+//       setSaving(false)
+//     }
+//   }
+
+//   /* ============================================================
+//      PDF PREVIEW
+//      ============================================================ */
+
+//   function handleDownloadPdf(challan) {
+//     const previewChallan = {
+//       id: challan.id,
+
+//       dcNumber: challan.dcNumber,
+
+//       date: challan.date,
+
+//       items: challan.items || [],
+
+//       applyStamp: challan.applyStamp === true,
+
+//       stampUrl: challan.applyStamp === true
+//         ? (challan.stampUrl || '')
+//         : '',
+
+//       stampPos: challan.stampPos || null,
+
+//       companyName: challan.companyName || companyName,
+//       companyLogo: challan.companyLogo || companyLogo,
+//       companyAddress: challan.companyAddress || companyAddress,
+//       companyEmail: challan.companyEmail || companyEmail,
+//       companyPhone: challan.companyPhone || companyPhone,
+
+//       customer: {
+//         name: challan.customerName || '',
+//         company: challan.customerCompany || '',
+//         phone: challan.customerPhone || '',
+//         address: challan.customerAddress || ''
+//       }
+//     }
+
+//     setPreview(previewChallan)
+//   }
+
+//   /* ============================================================
+//      PAGE
+//      ============================================================ */
+
+//   return (
+//     <div>
+
+//       {/* HEADER */}
+
+//       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+
+//         <div>
+
+//           <h1 className="font-display text-2xl font-semibold text-ink">
+//             Delivery Challan
+//           </h1>
+
+//           <p className="text-sm text-slateink mt-0.5">
+//             Create a DC — stock will be automatically deducted.
+//           </p>
+
+//         </div>
+
+//         <button
+//           onClick={openNewChallan}
+//           className="flex items-center gap-2 rounded-lg bg-ink text-white text-sm font-medium px-4 py-2.5 hover:bg-inkSoft transition-colors self-start"
+//         >
+//           <Plus size={16} />
+
+//           New Challan
+//         </button>
+
+//       </div>
+
+//       {/* SEARCH BAR + SORT */}
+
+//       <div className="mb-6 flex flex-col sm:flex-row gap-4">
+
+//         <div className="flex-1">
+
+//           <div className="relative max-w-md">
+
+//             <input
+//               type="text"
+//               value={searchTerm}
+//               onChange={(e) =>
+//                 setSearchTerm(e.target.value)
+//               }
+//               className="input w-full pl-9 pr-4"
+//               placeholder="Search by DC #, customer, company, date..."
+//             />
+
+//             {searchTerm && (
+//               <button
+//                 type="button"
+//                 onClick={() => setSearchTerm('')}
+//                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slateink hover:text-ink"
+//               >
+//                 <X size={14} />
+//               </button>
+//             )}
+
+//           </div>
+
+//           <p className="text-xs text-slateink mt-1">
+//             Search by DC number, customer name, company name, or date
+//           </p>
+
+//         </div>
+
+//         <div className="flex items-start gap-2">
+
+//           <div className="flex items-center gap-2">
+
+//             <ArrowUpDown size={14} className="text-slateink mt-1" />
+
+//             <select
+//               value={sortBy}
+//               onChange={(e) => setSortBy(e.target.value)}
+//               className="input text-sm py-2 pr-8 min-w-[180px]"
+//             >
+//               <option value="date-desc">Date (Newest First)</option>
+//               <option value="date-asc">Date (Oldest First)</option>
+//               <option value="items-desc">Items (Most First)</option>
+//               <option value="items-asc">Items (Least First)</option>
+//             </select>
+
+//           </div>
+
+//         </div>
+
+//       </div>
+
+//       {/* CHALLAN LIST */}
+
+//       {challans === null ? (
+//         <Loader />
+//       ) : filteredChallans.length === 0 ? (
+//         <div className="border border-dashed border-line rounded-2xl py-16 flex flex-col items-center justify-center text-center">
+
+//           <FileText
+//             className="text-slateink mb-3"
+//             size={28}
+//           />
+
+//           <p className="font-medium text-ink">
+//             {searchTerm
+//               ? 'No matching delivery challans found'
+//               : 'No Delivery Challan has been created yet.'}
+//           </p>
+
+//           {searchTerm && (
+//             <p className="text-sm text-slateink mt-1">
+//               Try searching with different keywords
+//             </p>
+//           )}
+
+//         </div>
+//       ) : (
+//         <div className="bg-surface rounded-2xl border border-line shadow-card overflow-hidden">
+
+//           <div className="overflow-x-auto">
+
+//             <table className="w-full text-sm">
+
+//               <thead>
+
+//                 <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-slateink">
+
+//                   <th className="px-4 py-3 font-medium">
+//                     DC #
+//                   </th>
+
+//                   <th className="px-4 py-3 font-medium">
+//                     Customer
+//                   </th>
+
+//                   <th className="px-4 py-3 font-medium">
+//                     Items
+//                   </th>
+
+//                   <th className="px-4 py-3 font-medium">
+//                     Date
+//                   </th>
+
+//                   <th className="px-4 py-3 font-medium">
+//                     Actions
+//                   </th>
+
+//                 </tr>
+
+//               </thead>
+
+//               <tbody>
+
+//                 {filteredChallans.map(
+//                   (c) => {
+
+//                     const hasName = !!c.customerName
+//                     const hasCompany = !!c.customerCompany
+
+//                     return (
+
+//                       <tr
+//                         key={c.id}
+//                         className="border-b border-line last:border-0 hover:bg-paper/60"
+//                       >
+
+//                         <td className="px-4 py-3 font-mono text-xs">
+//                           {c.dcNumber}
+//                         </td>
+
+//                         <td className="px-4 py-3">
+
+//                           {hasName && (
+//                             <>
+//                               <p className="font-medium text-ink">
+//                                 {c.customerName}
+//                               </p>
+//                               {hasCompany && (
+//                                 <p className="text-xs text-slateink">
+//                                   {c.customerCompany}
+//                                 </p>
+//                               )}
+//                             </>
+//                           )}
+
+//                           {!hasName && hasCompany && (
+//                             <p className="font-medium text-ink">
+//                               {c.customerCompany}
+//                             </p>
+//                           )}
+
+//                           {!hasName && !hasCompany && (
+//                             <p className="font-medium text-ink">
+//                               -
+//                             </p>
+//                           )}
+
+//                         </td>
+
+//                         <td className="px-4 py-3 text-xs text-slateink">
+//                           {c.items?.length || 0} item(s)
+//                         </td>
+
+//                         <td className="px-4 py-3 text-xs font-mono text-slateink">
+//                           {formatDate(c.date)}
+//                         </td>
+
+//                         <td className="px-4 py-3">
+
+//                           <div className="flex justify-end items-center gap-2 flex-wrap">
+
+//                             {/* VIEW */}
+
+//                             <button
+//                               onClick={() =>
+//                                 setPreview({
+//                                   id: c.id,
+
+//                                   dcNumber:
+//                                     c.dcNumber,
+
+//                                   date:
+//                                     c.date,
+
+//                                   items:
+//                                     c.items ||
+//                                     [],
+
+//                                   applyStamp:
+//                                     c.applyStamp === true,
+
+//                                   stampUrl:
+//                                     c.applyStamp === true
+//                                       ? (c.stampUrl || '')
+//                                       : '',
+
+//                                   stampPos:
+//                                     c.stampPos || null,
+
+//                                   companyName:
+//                                     c.companyName ||
+//                                     companyName,
+
+//                                   companyLogo:
+//                                     c.companyLogo ||
+//                                     companyLogo,
+
+//                                   companyAddress:
+//                                     c.companyAddress ||
+//                                     companyAddress,
+
+//                                   companyEmail:
+//                                     c.companyEmail ||
+//                                     companyEmail,
+
+//                                   companyPhone:
+//                                     c.companyPhone ||
+//                                     companyPhone,
+
+//                                   customer: {
+//                                     name:
+//                                       c.customerName,
+
+//                                     company:
+//                                       c.customerCompany,
+
+//                                     phone:
+//                                       c.customerPhone,
+
+//                                     address:
+//                                       c.customerAddress
+//                                   }
+//                                 })
+//                               }
+//                               className="flex items-center gap-1.5 text-teal-dark text-xs font-medium hover:underline"
+//                             >
+
+//                               <Printer size={14} />
+
+//                               View
+
+//                             </button>
+
+//                             {/* EDIT */}
+
+//                             <button
+//                               onClick={() =>
+//                                 openEditChallan(c)
+//                               }
+//                               className="flex items-center gap-1.5 text-ink text-xs font-medium hover:underline"
+//                             >
+
+//                               <Pencil size={14} />
+
+//                               Edit
+
+//                             </button>
+
+//                             {/* PDF */}
+
+//                             <button
+//                               onClick={() =>
+//                                 handleDownloadPdf(c)
+//                               }
+//                               className="flex items-center gap-1.5 text-red-600 text-xs font-medium hover:text-red-800"
+//                             >
+
+//                               <Download size={14} />
+
+//                               PDF
+
+//                             </button>
+
+//                             {/* DELETE */}
+
+//                             <button
+//                               onClick={() =>
+//                                 handleDeleteChallan(
+//                                   c.id
+//                                 )
+//                               }
+//                               className="flex items-center gap-1.5 text-coral text-xs font-medium hover:text-red-700"
+//                             >
+
+//                               <Trash2 size={14} />
+
+//                               Delete
+
+//                             </button>
+
+//                           </div>
+
+//                         </td>
+
+//                       </tr>
+
+//                     )
+//                   }
+//                 )}
+
+//               </tbody>
+
+//             </table>
+
+//           </div>
+
+//         </div>
+//       )}
+
+//       {/* CREATE / EDIT */}
+
+//       {showForm && (
+//         <Modal
+//           title={
+//             editingChallan
+//               ? `Edit Delivery Challan — ${editingChallan.dcNumber}`
+//               : 'New Delivery Challan'
+//           }
+//           onClose={() => {
+//             setShowForm(false)
+//             resetForm()
+//           }}
+//           wide
+//         >
+
+//           <form
+//             onSubmit={handleSubmit}
+//             className="space-y-5"
+//           >
+
+//             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+//               <label className="block">
+
+//                 <span className="text-xs font-medium text-slateink">
+//                   DC Number *
+//                 </span>
+
+//                 <input
+//                   type="text"
+//                   value={dcNumber}
+//                   onChange={(e) => {
+//                     setDcNumber(e.target.value)
+//                     setDcNumberError('')
+//                   }}
+//                   onBlur={() => {
+//                     if (dcNumber.trim()) {
+//                       validateDcNumber(dcNumber)
+//                     }
+//                   }}
+//                   className={`input mt-1 ${dcNumberError ? 'border-red-500 focus:ring-red-500' : ''}`}
+//                   placeholder="DC-YYYYMMDD-0001"
+//                   required
+//                 />
+
+//                 {dcNumberError && (
+//                   <p className="text-xs text-red-500 mt-1">
+//                     {dcNumberError}
+//                   </p>
+//                 )}
+
+//                 <small className="text-xs text-slateink mt-1 block">
+//                   Format: DC-YYYYMMDD-0001
+//                 </small>
+
+//               </label>
+
+//               <div className="block">
+
+//                 <span className="text-xs font-medium text-slateink">
+//                   Customer *
+//                 </span>
+
+//                 <div className="relative">
+
+//                   <input
+//                     type="text"
+//                     value={
+//                       customerSearch
+//                     }
+//                     onChange={(e) => {
+
+//                       if (
+//                         editingChallan
+//                       ) {
+//                         return
+//                       }
+
+//                       const value =
+//                         e.target.value
+
+//                       setCustomerSearch(
+//                         value
+//                       )
+
+//                       setCustomerId('')
+
+//                       setShowCustomerDropdown(
+//                         true
+//                       )
+
+//                       setError('')
+//                     }}
+//                     onFocus={() => {
+
+//                       if (
+//                         editingChallan
+//                       ) {
+//                         return
+//                       }
+
+//                       setShowCustomerDropdown(
+//                         true
+//                       )
+//                     }}
+//                     disabled={
+//                       !!editingChallan
+//                     }
+//                     required
+//                     className={`input mt-1 ${
+//                       editingChallan
+//                         ? 'bg-slate-100 cursor-not-allowed'
+//                         : ''
+//                     }`}
+//                     placeholder={
+//                       editingChallan
+//                         ? 'Customer cannot be changed while editing'
+//                         : 'Search customer by name, company or phone...'
+//                     }
+//                   />
+
+//                   {!editingChallan &&
+//                     customerSearch && (
+//                       <button
+//                         type="button"
+//                         onClick={
+//                           clearCustomer
+//                         }
+//                         className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5 text-slateink hover:text-ink text-sm"
+//                         title="Clear customer"
+//                       >
+//                         ×
+//                       </button>
+//                     )}
+
+//                   {!editingChallan &&
+//                     showCustomerDropdown && (
+//                       <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-line rounded-lg shadow-lg overflow-hidden">
+
+//                         <div className="max-h-64 overflow-y-auto">
+
+//                           {customers ===
+//                           null ? (
+//                             <div className="px-4 py-4 text-sm text-slateink text-center">
+//                               Loading customers...
+//                             </div>
+//                           ) : filteredCustomers.length ===
+//                             0 ? (
+//                             <div className="px-4 py-4 text-sm text-slateink text-center">
+//                               No customer found.
+//                             </div>
+//                           ) : (
+//                             filteredCustomers.map(
+//                               (
+//                                 customer
+//                               ) => (
+
+//                                 <button
+//                                   key={
+//                                     customer.id
+//                                   }
+//                                   type="button"
+//                                   onClick={() =>
+//                                     selectCustomer(
+//                                       customer
+//                                     )
+//                                   }
+//                                   className="w-full text-left px-4 py-3 hover:bg-paper border-b border-line last:border-b-0 transition-colors"
+//                                 >
+
+//                                   <div className="flex items-start justify-between gap-3">
+
+//                                     <div className="min-w-0">
+
+//                                       {customer.name ? (
+//                                         <>
+//                                           <div className="font-medium text-sm text-ink truncate">
+//                                             {customer.name}
+//                                           </div>
+//                                           {customer.company && (
+//                                             <div className="text-xs text-slateink mt-0.5 truncate">
+//                                               {customer.company}
+//                                             </div>
+//                                           )}
+//                                         </>
+//                                       ) : (
+//                                         customer.company && (
+//                                           <div className="font-medium text-sm text-ink truncate">
+//                                             {customer.company}
+//                                           </div>
+//                                         )
+//                                       )}
+
+//                                       {customer.phone && (
+//                                         <div className="text-xs text-slateink mt-0.5">
+//                                           Phone:{' '}
+//                                           {
+//                                             customer.phone
+//                                           }
+//                                         </div>
+//                                       )}
+
+//                                       {customer.address && (
+//                                         <div className="text-xs text-slateink mt-0.5 truncate">
+//                                           {
+//                                             customer.address
+//                                           }
+//                                         </div>
+//                                       )}
+
+//                                     </div>
+
+//                                   </div>
+
+//                                 </button>
+
+//                               )
+//                             )
+//                           )}
+
+//                         </div>
+
+//                       </div>
+//                     )}
+
+//                 </div>
+
+//                 {editingChallan && (
+//                   <small className="text-xs text-slateink mt-1 block">
+//                     Customer cannot be changed while editing this challan.
+//                   </small>
+//                 )}
+
+//               </div>
+
+//             </div>
+
+//             <div>
+
+//               <span className="text-xs font-medium text-slateink">
+//                 Date
+//               </span>
+
+//               <input
+//                 type="date"
+//                 value={
+//                   editingChallan
+//                     ? (
+//                         editingChallan.date ||
+//                         todayISO()
+//                       )
+//                     : dcDate
+//                 }
+//                 onChange={(e) => {
+
+//                   if (
+//                     editingChallan
+//                   ) {
+//                     setEditingChallan({
+//                       ...editingChallan,
+//                       date:
+//                         e.target.value
+//                     })
+//                   } else {
+//                     setDcDate(
+//                       e.target.value
+//                     )
+//                   }
+
+//                 }}
+//                 className="input mt-1"
+//               />
+
+//             </div>
+
+//             {/* ============================================
+//                 STAMP CHECKBOX
+//                 ============================================ */}
+
+//             <div className="border border-line rounded-xl p-4 bg-paper/40">
+
+//               <label className="flex items-start gap-3 cursor-pointer select-none">
+//                 <input
+//                   type="checkbox"
+//                   checked={applyStamp}
+//                   onChange={(e) => setApplyStamp(e.target.checked)}
+//                   className="mt-1 h-4 w-4 accent-teal-dark"
+//                 />
+//                 <span>
+//                   <span className="block text-sm font-medium text-ink flex items-center gap-1.5">
+//                     <StampIcon size={12} />
+//                     Include Stamp
+//                   </span>
+//                   <span className="block text-xs text-slateink mt-0.5">
+//                     {companyStamp
+//                       ? 'Stamp image will appear on the challan. You can drag and resize it in the preview.'
+//                       : 'No stamp uploaded in company profile. Upload one in company settings to enable this.'}
+//                   </span>
+//                 </span>
+//               </label>
+
+//             </div>
+
+//             <div className="border border-line rounded-xl p-4">
+
+//               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+
+//                 <p className="text-xs font-medium text-slateink">
+//                   Add Products
+//                 </p>
+
+//                 <p className="text-xs text-slateink">
+//                   Search, tick multiple products and add them together.
+//                 </p>
+
+//               </div>
+
+//               <div className="mb-3">
+
+//                 <input
+//                   type="text"
+//                   value={stockSearch}
+//                   onChange={(e) =>
+//                     setStockSearch(
+//                       e.target.value
+//                     )
+//                   }
+//                   className="input w-full"
+//                   placeholder="Search product by name, category, MAC or serial..."
+//                 />
+
+//               </div>
+
+//               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+
+//                 <p className="text-xs text-slateink">
+
+//                   {
+//                     filteredAvailableStock.length
+//                   }{' '}
+//                   product(s) found
+
+//                 </p>
+
+//                 <div className="flex items-center gap-3">
+
+//                   {selectedStockIds.length >
+//                     0 && (
+
+//                     <span className="text-xs font-medium text-teal-dark">
+
+//                       {
+//                         selectedStockIds.length
+//                       }{' '}
+//                       selected
+
+//                     </span>
+
+//                   )}
+
+//                   {filteredAvailableStock.length >
+//                     0 && (
+
+//                     <button
+//                       type="button"
+//                       onClick={
+//                         selectAllFiltered
+//                       }
+//                       className="text-xs font-medium text-ink hover:underline"
+//                     >
+//                       Select All
+//                     </button>
+
+//                   )}
+
+//                   {selectedStockIds.length >
+//                     0 && (
+
+//                     <button
+//                       type="button"
+//                       onClick={
+//                         clearSelection
+//                       }
+//                       className="text-xs font-medium text-coral hover:underline"
+//                     >
+//                       Clear
+//                     </button>
+
+//                   )}
+
+//                 </div>
+
+//               </div>
+
+//               <div className="border border-line rounded-lg overflow-hidden">
+
+//                 {filteredAvailableStock.length ===
+//                 0 ? (
+
+//                   <div className="px-4 py-6 text-center text-sm text-slateink">
+
+//                     {stock === null
+//                       ? 'Loading stock…'
+//                       : 'No matching products found.'}
+
+//                   </div>
+
+//                 ) : (
+
+//                   <div className="max-h-72 overflow-y-auto">
+
+//                     {filteredAvailableStock.map(
+//                       (s) => {
+
+//                         const isSelected =
+//                           selectedStockIds.includes(
+//                             s.id
+//                           )
+
+//                         const serialized =
+//                           !!s.mac ||
+//                           !!s.serial
+
+//                         return (
+
+//                           <label
+//                             key={s.id}
+//                             className={`
+//                               flex
+//                               items-center
+//                               gap-3
+//                               px-3
+//                               py-2.5
+//                               border-b
+//                               border-line
+//                               last:border-b-0
+//                               cursor-pointer
+//                               transition-colors
+//                               ${
+//                                 isSelected
+//                                   ? 'bg-teal/10'
+//                                   : 'hover:bg-paper'
+//                               }
+//                             `}
+//                           >
+
+//                             <input
+//                               type="checkbox"
+//                               checked={
+//                                 isSelected
+//                               }
+//                               onChange={() =>
+//                                 toggleStockSelection(
+//                                   s.id
+//                                 )
+//                               }
+//                               className="w-4 h-4 accent-teal shrink-0"
+//                             />
+
+//                             <div className="flex-1 min-w-0">
+
+//                               <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+
+//                                 <span className="font-medium text-sm text-ink truncate">
+//                                   {s.name}
+//                                 </span>
+
+//                                 {s.category && (
+//                                   <span className="text-xs text-slateink truncate">
+//                                     {
+//                                       s.category
+//                                     }
+//                                   </span>
+//                                 )}
+
+//                               </div>
+
+//                               <div className="text-xs text-slateink mt-0.5">
+
+//                                 {s.mac && (
+//                                   <span>
+//                                     MAC:{' '}
+//                                     {s.mac}
+//                                   </span>
+//                                 )}
+
+//                                 {s.serial && (
+//                                   <span>
+//                                     {s.mac
+//                                       ? ' · '
+//                                       : ''}
+//                                     Serial:{' '}
+//                                     {
+//                                       s.serial
+//                                     }
+//                                   </span>
+//                                 )}
+
+//                                 {!serialized && (
+//                                   <span>
+//                                     {!s.mac &&
+//                                     !s.serial
+//                                       ? `Available Qty: ${
+//                                           Number(
+//                                             s.quantity
+//                                           ) ||
+//                                           0
+//                                         }`
+//                                       : ''}
+//                                   </span>
+//                                 )}
+
+//                               </div>
+
+//                             </div>
+
+//                             <span className="text-xs text-slateink shrink-0">
+
+//                               {serialized
+//                                 ? 'Qty 1'
+//                                 : `Qty ${
+//                                     Number(
+//                                       s.quantity
+//                                     ) ||
+//                                     0
+//                                   }`}
+
+//                             </span>
+
+//                           </label>
+
+//                         )
+//                       }
+//                     )}
+
+//                   </div>
+
+//                 )}
+
+//               </div>
+
+//               <div className="flex flex-col sm:flex-row gap-2 mt-3">
+
+//                 <button
+//                   type="button"
+//                   onClick={
+//                     addSelectedItems
+//                   }
+//                   disabled={
+//                     selectedStockIds.length ===
+//                     0
+//                   }
+//                   className="rounded-lg bg-teal text-white text-sm font-medium px-4 py-2.5 hover:bg-teal-dark disabled:opacity-50 disabled:cursor-not-allowed flex-1"
+//                 >
+
+//                   Add Selected
+
+//                   {selectedStockIds.length >
+//                     0
+//                     ? ` (${selectedStockIds.length})`
+//                     : ''}
+
+//                 </button>
+
+//               </div>
+
+//               {items.length > 0 && (
+
+//                 <div className="mt-4 space-y-2">
+
+//                   <div className="text-xs font-medium text-slateink">
+//                     Selected Products ({items.length})
+//                   </div>
+
+//                   {items.map(
+//                     (item) => {
+
+//                       const serialized =
+//                         !!item.mac ||
+//                         !!item.serial
+
+//                       return (
+
+//                         <div
+//                           key={
+//                             item.stockId
+//                           }
+//                           className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-paper rounded-lg px-3 py-3 text-sm"
+//                         >
+
+//                           <div>
+
+//                             <div className="font-medium text-ink">
+//                               {
+//                                 item.name
+//                               }
+//                             </div>
+
+//                             <div className="text-xs text-slateink mt-1">
+
+//                               {item.category &&
+//                                 `${item.category} · `}
+
+//                               {item.mac &&
+//                                 `MAC ${item.mac}`}
+
+//                               {item.serial &&
+//                                 `Serial ${item.serial}`}
+
+//                               {!item.mac &&
+//                                 !item.serial &&
+//                                 `Qty ${item.qty}`}
+
+//                             </div>
+
+//                           </div>
+
+//                           <div className="flex items-center gap-3">
+
+//                             {!serialized && (
+
+//                               <input
+//                                 type="number"
+//                                 min={1}
+//                                 max={
+//                                   Number(
+//                                     stock?.find(
+//                                       (s) =>
+//                                         s.id ===
+//                                         item.stockId
+//                                     )?.quantity
+//                                   ) ||
+//                                   item.available ||
+//                                   1
+//                                 }
+//                                 value={
+//                                   item.qty
+//                                 }
+//                                 onChange={(
+//                                   e
+//                                 ) =>
+//                                   changeItemQty(
+//                                     item.stockId,
+//                                     e.target.value
+//                                   )
+//                                 }
+//                                 className="input w-24"
+//                               />
+
+//                             )}
+
+//                             {serialized && (
+//                               <span className="text-xs text-slateink">
+//                                 Qty 1
+//                               </span>
+//                             )}
+
+//                             <button
+//                               type="button"
+//                               onClick={() =>
+//                                 removeItem(
+//                                   item.stockId
+//                                 )
+//                               }
+//                               className="text-coral"
+//                               title="Remove"
+//                             >
+
+//                               <Trash2
+//                                 size={16}
+//                               />
+
+//                             </button>
+
+//                           </div>
+
+//                         </div>
+
+//                       )
+//                     }
+//                   )}
+
+//                 </div>
+
+//               )}
+
+//             </div>
+
+//             {error && (
+//               <p className="text-xs font-medium text-coral bg-coral-light rounded-lg px-3 py-2">
+//                 {error}
+//               </p>
+//             )}
+
+//             <button
+//               type="submit"
+//               disabled={saving || !!dcNumberError}
+//               className="w-full rounded-lg bg-ink text-white text-sm font-medium py-2.5 hover:bg-inkSoft transition-colors disabled:opacity-60"
+//             >
+
+//               {saving
+//                 ? editingChallan
+//                   ? 'Updating…'
+//                   : 'Saving…'
+//                 : editingChallan
+//                   ? 'Update Challan'
+//                   : 'Generate Challan'}
+
+//             </button>
+
+//           </form>
+
+//         </Modal>
+//       )}
+
+//       {preview && (
+//         <PrintableModal
+//           doc={preview}
+//           type="Delivery Challan"
+//           onClose={() =>
+//             setPreview(null)
+//           }
+//         />
+//       )}
+
+//     </div>
+//   )
+// }
+
+// /* =================================================================
+//    PRINTABLE DELIVERY CHALLAN
+//    =================================================================
+//    Ab ye Invoice page jaisa full-screen overlay hai:
+//      - A4 sheet modal ke andar full dikhta hai (no horizontal scroll)
+//      - Stamp draggable + resizable
+//      - Print seedha render ki hui sheet ko print karta hai
+//        (koi about:blank window nahi khulti)
+//    ================================================================= */
+
+// export function PrintableModal({
+//   doc,
+//   type,
+//   onClose
+// }) {
+//   const { company, companyId } = useAuth()
+
+//   /* ============================================================
+//      STAMP STATE (DRAG + RESIZE)
+//      ============================================================ */
+
+//   const [stampPos, setStampPos] = useState(() => {
+//     if (doc.stampPos) {
+//       return {
+//         x: doc.stampPos.x ?? DEFAULT_STAMP.x,
+//         y: doc.stampPos.y ?? DEFAULT_STAMP.y,
+//         width: doc.stampPos.width ?? DEFAULT_STAMP.width,
+//         height: doc.stampPos.height ?? DEFAULT_STAMP.height
+//       }
+//     }
+//     return { ...DEFAULT_STAMP }
+//   })
+
+//   const [isStampDragging, setIsStampDragging] = useState(false)
+//   const [isStampResizing, setIsStampResizing] = useState(false)
+
+//   const stampDragOffset = useRef({ x: 0, y: 0 })
+//   const sheetRef = useRef(null)
+//   const stampRef = useRef(null)
+
+//   /* ============================================================
+//      SYNC STAMP POSITION WHEN doc CHANGES
+//      ============================================================ */
+
+//   useEffect(() => {
+//     if (doc.stampPos) {
+//       setStampPos({
+//         x: doc.stampPos.x ?? DEFAULT_STAMP.x,
+//         y: doc.stampPos.y ?? DEFAULT_STAMP.y,
+//         width: doc.stampPos.width ?? DEFAULT_STAMP.width,
+//         height: doc.stampPos.height ?? DEFAULT_STAMP.height
+//       })
+//     } else {
+//       setStampPos({ ...DEFAULT_STAMP })
+//     }
+//   }, [doc.id])
+
+//   /* ============================================================
+//      SAVE STAMP POSITION TO FIREBASE (debounced)
+//      ============================================================ */
+
+//   const saveStampTimeoutRef = useRef(null)
+
+//   function persistStampPos(pos) {
+//     if (!doc.id || !companyId) return
+//     if (!doc.applyStamp) return
+
+//     if (saveStampTimeoutRef.current) {
+//       clearTimeout(saveStampTimeoutRef.current)
+//     }
+
+//     saveStampTimeoutRef.current = setTimeout(async () => {
+//       try {
+//         await update(
+//           ref(db, `companies/${companyId}/challans/${doc.id}`),
+//           { stampPos: pos }
+//         )
+//       } catch (err) {
+//         console.error('Stamp position save failed:', err)
+//       }
+//     }, 500)
+//   }
+
+//   /* ============================================================
+//      STAMP — START DRAG
+//      ============================================================ */
+
+//   function handleStampMouseDown(e) {
+//     if (!doc.applyStamp || !doc.stampUrl) return
+//     if (!stampRef.current) return
+//     e.preventDefault()
+//     e.stopPropagation()
+
+//     const stampRect = stampRef.current.getBoundingClientRect()
+
+//     stampDragOffset.current = {
+//       x: e.clientX - stampRect.left,
+//       y: e.clientY - stampRect.top
+//     }
+
+//     setIsStampDragging(true)
+//   }
+
+//   function handleStampResizeMouseDown(e) {
+//     e.preventDefault()
+//     e.stopPropagation()
+//     setIsStampResizing(true)
+//   }
+
+//   /* ============================================================
+//      MOUSE MOVE — STAMP DRAG/RESIZE
+//      ============================================================ */
+
+//   useEffect(() => {
+//     if (!isStampDragging && !isStampResizing) return
+
+//     function handleMouseMove(e) {
+//       const sheet = sheetRef.current
+//       if (!sheet) return
+
+//       const sheetRect = sheet.getBoundingClientRect()
+
+//       if (isStampDragging) {
+//         const xPx = e.clientX - sheetRect.left - stampDragOffset.current.x
+//         const yPx = e.clientY - sheetRect.top - stampDragOffset.current.y
+
+//         const xPercent = (xPx / sheetRect.width) * 100
+//         const yPercent = (yPx / sheetRect.height) * 100
+
+//         const clampedX = Math.min(100 - stampPos.width, Math.max(0, xPercent))
+//         const clampedY = Math.min(100 - stampPos.height, Math.max(0, yPercent))
+
+//         setStampPos(prev => ({ ...prev, x: clampedX, y: clampedY }))
+//       } else if (isStampResizing) {
+//         const xPx = e.clientX - sheetRect.left
+//         const yPx = e.clientY - sheetRect.top
+
+//         const xPercent = (xPx / sheetRect.width) * 100
+//         const yPercent = (yPx / sheetRect.height) * 100
+
+//         const newWidth = Math.min(80, Math.max(5, xPercent - stampPos.x))
+//         const newHeight = Math.min(80, Math.max(5, yPercent - stampPos.y))
+
+//         setStampPos(prev => ({ ...prev, width: newWidth, height: newHeight }))
+//       }
+//     }
+
+//     function handleMouseUp() {
+//       if (isStampDragging) {
+//         setIsStampDragging(false)
+//         persistStampPos(stampPos)
+//       }
+//       if (isStampResizing) {
+//         setIsStampResizing(false)
+//         persistStampPos(stampPos)
+//       }
+//     }
+
+//     document.addEventListener('mousemove', handleMouseMove)
+//     document.addEventListener('mouseup', handleMouseUp)
+
+//     return () => {
+//       document.removeEventListener('mousemove', handleMouseMove)
+//       document.removeEventListener('mouseup', handleMouseUp)
+//     }
+//   }, [isStampDragging, isStampResizing, stampPos])
+
+//   /* ============================================================
+//      TOUCH SUPPORT — STAMP
+//      ============================================================ */
+
+//   function handleStampTouchStart(e) {
+//     if (!doc.applyStamp || !doc.stampUrl) return
+//     if (!stampRef.current) return
+//     if (!e.touches[0]) return
+
+//     const stampRect = stampRef.current.getBoundingClientRect()
+//     const touch = e.touches[0]
+
+//     stampDragOffset.current = {
+//       x: touch.clientX - stampRect.left,
+//       y: touch.clientY - stampRect.top
+//     }
+
+//     setIsStampDragging(true)
+//   }
+
+//   useEffect(() => {
+//     if (!isStampDragging && !isStampResizing) return
+
+//     function handleTouchMove(e) {
+//       if (!e.touches[0]) return
+//       e.preventDefault()
+
+//       const sheet = sheetRef.current
+//       if (!sheet) return
+
+//       const sheetRect = sheet.getBoundingClientRect()
+//       const touch = e.touches[0]
+
+//       if (isStampDragging) {
+//         const xPx = touch.clientX - sheetRect.left - stampDragOffset.current.x
+//         const yPx = touch.clientY - sheetRect.top - stampDragOffset.current.y
+
+//         const xPercent = (xPx / sheetRect.width) * 100
+//         const yPercent = (yPx / sheetRect.height) * 100
+
+//         const clampedX = Math.min(100 - stampPos.width, Math.max(0, xPercent))
+//         const clampedY = Math.min(100 - stampPos.height, Math.max(0, yPercent))
+
+//         setStampPos(prev => ({ ...prev, x: clampedX, y: clampedY }))
+//       } else if (isStampResizing) {
+//         const xPx = touch.clientX - sheetRect.left
+//         const yPx = touch.clientY - sheetRect.top
+
+//         const xPercent = (xPx / sheetRect.width) * 100
+//         const yPercent = (yPx / sheetRect.height) * 100
+
+//         const newWidth = Math.min(80, Math.max(5, xPercent - stampPos.x))
+//         const newHeight = Math.min(80, Math.max(5, yPercent - stampPos.y))
+
+//         setStampPos(prev => ({ ...prev, width: newWidth, height: newHeight }))
+//       }
+//     }
+
+//     function handleTouchEnd() {
+//       if (isStampDragging) {
+//         setIsStampDragging(false)
+//         persistStampPos(stampPos)
+//       }
+//       if (isStampResizing) {
+//         setIsStampResizing(false)
+//         persistStampPos(stampPos)
+//       }
+//     }
+
+//     document.addEventListener('touchmove', handleTouchMove, { passive: false })
+//     document.addEventListener('touchend', handleTouchEnd)
+
+//     return () => {
+//       document.removeEventListener('touchmove', handleTouchMove)
+//       document.removeEventListener('touchend', handleTouchEnd)
+//     }
+//   }, [isStampDragging, isStampResizing, stampPos])
+
+//   /* ============================================================
+//      PRINT — Invoice style (print the rendered preview directly)
+//      ============================================================ */
+
+//   function printInvoice() {
+//     window.print()
+//   }
+
+//   /* ============================================================
+//      GET MAC
+//      ============================================================ */
+
+//   function getMacLines(item) {
+//     if (!item)
+//       return []
+
+//     if (Array.isArray(item.mac))
+//       return item.mac
+
+//     if (
+//       typeof item.mac === 'string' &&
+//       item.mac.includes(',')
+//     ) {
+//       return item.mac
+//         .split(',')
+//         .map(
+//           (x) =>
+//             x.trim()
+//         )
+//         .filter(Boolean)
+//     }
+
+//     return item.mac
+//       ? [item.mac]
+//       : []
+//   }
+
+//   /* ============================================================
+//      GET SERIAL
+//      ============================================================ */
+
+//   function getSerialLines(item) {
+//     if (!item)
+//       return []
+
+//     if (
+//       Array.isArray(
+//         item.serial
+//       )
+//     ) {
+//       return item.serial
+//     }
+
+//     if (
+//       typeof item.serial ===
+//         'string' &&
+//       item.serial.includes(',')
+//     ) {
+//       return item.serial
+//         .split(',')
+//         .map(
+//           (x) =>
+//             x.trim()
+//         )
+//         .filter(Boolean)
+//     }
+
+//     return item.serial
+//       ? [item.serial]
+//       : []
+//   }
+
+//   /* ============================================================
+//      GROUP SAME PRODUCT
+//      ============================================================ */
+
+//   const groupedItems =
+//     useMemo(() => {
+//       const groups = []
+//       const map = new Map()
+
+//       for (
+//         const item of (
+//           Array.isArray(doc.items)
+//             ? doc.items
+//             : []
+//         )
+//       ) {
+//         const key =
+//           `${item.category || ''}__${item.name || ''}`
+//             .toLowerCase()
+//             .trim()
+
+//         if (!map.has(key)) {
+//           const newGroup = {
+//             stockId:
+//               item.stockId ||
+//               '',
+
+//             name:
+//               item.name ||
+//               '',
+
+//             category:
+//               item.category ||
+//               '',
+
+//             qty: 0,
+
+//             macLines: [],
+
+//             serialLines: []
+//           }
+
+//           map.set(
+//             key,
+//             newGroup
+//           )
+
+//           groups.push(
+//             newGroup
+//           )
+//         }
+
+//         const group =
+//           map.get(key)
+
+//         group.qty +=
+//           Number(item.qty) || 0
+
+//         const macs =
+//           getMacLines(item)
+
+//         macs.forEach(
+//           (mac) => {
+//             if (mac)
+//               group.macLines.push(
+//                 mac
+//               )
+//           }
+//         )
+
+//         const serials =
+//           getSerialLines(item)
+
+//         serials.forEach(
+//           (serial) => {
+//             if (serial)
+//               group.serialLines.push(
+//                 serial
+//               )
+//           }
+//         )
+//       }
+
+//       return groups
+//     }, [doc.items])
+
+//   /* ============================================================
+//      PRINTABLE ITEMS
+//      ============================================================ */
+
+//   const printableItems =
+//     groupedItems.length > 0
+//       ? groupedItems
+//       : [
+//           {
+//             name: '',
+//             qty: '',
+//             macLines: [],
+//             serialLines: []
+//           }
+//         ]
+
+//   /* ============================================================
+//      DYNAMIC COMPANY INFO
+//      ============================================================ */
+
+//   const companyName =
+//     doc.companyName ||
+//     company?.name ||
+//     FALLBACK_COMPANY_NAME
+
+//   const companyLogo =
+//     doc.companyLogo ||
+//     company?.logoUrl ||
+//     FALLBACK_COMPANY_LOGO
+
+//   const companyAddress =
+//     doc.companyAddress ||
+//     company?.address ||
+//     FALLBACK_COMPANY_ADDRESS
+
+//   const companyEmail =
+//     doc.companyEmail ||
+//     company?.email ||
+//     FALLBACK_COMPANY_EMAIL
+
+//   const companyPhone =
+//     doc.companyPhone ||
+//     company?.phone ||
+//     FALLBACK_COMPANY_PHONE
+
+//   const customerName =
+//     doc.customer?.name ||
+//     ''
+
+//   const customerCompany =
+//     doc.customer?.company ||
+//     ''
+
+//   const customerAddress =
+//     doc.customer?.address ||
+//     ''
+
+//   const customerPhone =
+//     doc.customer?.phone ||
+//     ''
+
+//   const showStamp =
+//     doc.applyStamp === true &&
+//     doc.stampUrl &&
+//     doc.stampUrl.trim() !== ''
+
+//   return (
+//     <>
+//       {/* ============================================================
+//           FULL SCREEN PREVIEW OVERLAY (Invoice style)
+//           ============================================================ */}
+
+//       <div className="dc-preview-overlay fixed inset-0 z-[9999] bg-black/60 overflow-y-auto p-4 sm:p-8">
+
+//         <div className="dc-preview-controls max-w-[900px] mx-auto mb-4 flex items-center justify-between gap-3">
+
+//           <div className="min-w-0">
+//             <p className="text-white font-semibold text-sm">
+//               {type} Preview
+//             </p>
+//             <p className="text-white/70 text-xs truncate">
+//               {doc.dcNumber}
+//               {showStamp && (
+//                 <span className="ml-2 inline-flex items-center gap-1 text-white/60">
+//                   <Move size={10} /> Stamp movable
+//                 </span>
+//               )}
+//             </p>
+//           </div>
+
+//           <div className="flex items-center gap-2 shrink-0">
+//             <button
+//               onClick={printInvoice}
+//               className="inline-flex items-center gap-2 rounded-lg bg-white text-ink px-4 py-2 text-sm font-medium hover:bg-gray-100"
+//             >
+//               <Printer size={16} />
+//               Print / Save as PDF
+//             </button>
+//             <button
+//               onClick={onClose}
+//               className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-white/10 text-white hover:bg-white/20"
+//             >
+//               <X size={18} />
+//             </button>
+//           </div>
+
+//         </div>
+
+//         <div className="dc-print-area" id="dc-print-area">
+//           <div className="dc-sheet" ref={sheetRef}>
+
+//             {/* TITLE */}
+//             <div className="dc-title">
+//               DELIVERY CHALLAN
+//             </div>
+
+//             {/* LOGO */}
+//             <img
+//               src={companyLogo}
+//               alt={companyName}
+//               className="dc-logo"
+//               onError={(e) => {
+//                 if (e.currentTarget.src !== window.location.origin + FALLBACK_COMPANY_LOGO) {
+//                   e.currentTarget.src = FALLBACK_COMPANY_LOGO
+//                 }
+//               }}
+//             />
+
+//             {/* HEADER */}
+//             <div className="dc-header">
+
+//               {/* LEFT */}
+//               <div className="dc-left">
+//                 <div className="dc-address">
+//                   {companyAddress}
+//                 </div>
+
+//                 {companyPhone && (
+//                   <div>{companyPhone}</div>
+//                 )}
+
+//                 {companyEmail && (
+//                   <div className="dc-email">
+//                     {companyEmail}
+//                   </div>
+//                 )}
+
+//                 <div className="dc-delivery-to">
+//                   <div className="dc-label">
+//                     Delivery To:
+//                   </div>
+
+//                   {customerCompany && (
+//                     <div className="dc-delivery-to-name">
+//                       M/S. {customerCompany}
+//                     </div>
+//                   )}
+
+//                   {!customerCompany && customerName && (
+//                     <div className="dc-delivery-to-name">
+//                       {customerName}
+//                     </div>
+//                   )}
+
+//                   {customerCompany && customerName && customerName !== customerCompany && (
+//                     <div>
+//                       {customerName}
+//                     </div>
+//                   )}
+
+//                   {customerAddress && (
+//                     <div className="dc-small-text">
+//                       {customerAddress}
+//                     </div>
+//                   )}
+
+//                   {customerPhone && (
+//                     <div className="dc-small-text">
+//                       Phone: {customerPhone}
+//                     </div>
+//                   )}
+//                 </div>
+//               </div>
+
+//               {/* RIGHT INFO BOX */}
+//               <div>
+//                 <div className="dc-info-box">
+//                   <div className="dc-info-row">
+//                     <div className="dc-info-cell dc-info-label">
+//                       Delivery Challan No:
+//                     </div>
+//                     <div className="dc-info-cell dc-info-value">
+//                       {doc.dcNumber}
+//                     </div>
+//                   </div>
+//                   <div className="dc-info-row">
+//                     <div className="dc-info-cell dc-info-label">
+//                       Date:
+//                     </div>
+//                     <div className="dc-info-cell dc-info-value">
+//                       {formatDate(doc.date)}
+//                     </div>
+//                   </div>
+//                 </div>
+//               </div>
+
+//             </div>
+
+//             {/* PRODUCT TABLE */}
+//             <div className="dc-products">
+//               <table className="dc-product-table">
+//                 <colgroup>
+//                   <col style={{ width: '9%' }} />
+//                   <col style={{ width: '30%' }} />
+//                   <col style={{ width: '14%' }} />
+//                   <col style={{ width: '25%' }} />
+//                   <col style={{ width: '22%' }} />
+//                 </colgroup>
+//                 <thead>
+//                   <tr>
+//                     <th>S.No.</th>
+//                     <th>Product Name</th>
+//                     <th>Quantity</th>
+//                     <th>Mac Address</th>
+//                     <th>Serial Number</th>
+//                   </tr>
+//                 </thead>
+//                 <tbody>
+//                   {printableItems.map(
+//                     (
+//                       item,
+//                       index
+//                     ) => {
+
+//                       const macLines =
+//                         item.macLines ||
+//                         []
+
+//                       const serialLines =
+//                         item.serialLines ||
+//                         []
+
+//                       const maxLines =
+//                         Math.max(
+//                           1,
+//                           macLines.length,
+//                           serialLines.length
+//                         )
+
+//                       return (
+
+//                         <tr key={`${item.name}-${index}`}>
+//                           <td>{index + 1}</td>
+//                           <td className="dc-product-name">{item.name}</td>
+//                           <td>{item.qty}</td>
+//                           <td>
+//                             {Array.from({
+//                               length:
+//                                 maxLines
+//                             }).map(
+//                               (
+//                                 _,
+//                                 macIndex
+//                               ) => (
+
+//                                 <div
+//                                   key={`mac-${macIndex}`}
+//                                   className="dc-multi-line"
+//                                 >
+
+//                                   {
+//                                     macLines[
+//                                       macIndex
+//                                     ] || ''
+//                                   }
+
+//                                 </div>
+
+//                               )
+//                             )}
+//                           </td>
+//                           <td>
+//                             {Array.from({
+//                               length:
+//                                 maxLines
+//                             }).map(
+//                               (
+//                                 _,
+//                                 serialIndex
+//                               ) => (
+
+//                                 <div
+//                                   key={`serial-${serialIndex}`}
+//                                   className="dc-multi-line"
+//                                 >
+
+//                                   {
+//                                     serialLines[
+//                                       serialIndex
+//                                     ] || ''
+//                                   }
+
+//                                 </div>
+
+//                               )
+//                             )}
+//                           </td>
+//                         </tr>
+
+//                       )
+//                     }
+//                   )}
+//                 </tbody>
+//               </table>
+//             </div>
+
+//             {/* STAMP — DRAGGABLE & RESIZABLE */}
+//             {showStamp && (
+//               <div
+//                 className={`dc-stamp-box ${isStampDragging ? 'is-dragging' : ''}`}
+//                 style={{
+//                   left: `${stampPos.x}%`,
+//                   top: `${stampPos.y}%`,
+//                   width: `${stampPos.width}%`,
+//                   height: `${stampPos.height}%`
+//                 }}
+//                 ref={stampRef}
+//                 onMouseDown={handleStampMouseDown}
+//                 onTouchStart={handleStampTouchStart}
+//               >
+//                 <img
+//                   src={doc.stampUrl}
+//                   alt="Company Stamp"
+//                   className="dc-stamp-img"
+//                   draggable={false}
+//                 />
+//                 <div className="dc-stamp-hint">
+//                   <Move size={10} />
+//                 </div>
+//                 <div
+//                   className="dc-stamp-resize"
+//                   onMouseDown={handleStampResizeMouseDown}
+//                   onTouchStart={(e) => {
+//                     e.preventDefault()
+//                     e.stopPropagation()
+//                     setIsStampResizing(true)
+//                   }}
+//                 />
+//               </div>
+//             )}
+
+//             {/* SIGNATURES */}
+//             <div className="dc-signatures">
+
+//               <div className="dc-signature-top">
+//                 <div className="dc-signature-heading">
+//                   Received In Sound Condition By:
+//                 </div>
+//                 <div className="dc-signature-heading right">
+//                   Delivered By:
+//                 </div>
+//               </div>
+
+//               <div className="dc-signature-bottom">
+
+//                 <div className="dc-signature-block">
+//                   <div className="dc-signature-name">
+//                     Name:
+//                   </div>
+//                   <div className="dc-signature-line" />
+//                   <div className="dc-signature-label">
+//                     Signature
+//                   </div>
+//                 </div>
+
+//                 <div className="dc-signature-block">
+//                   <div className="dc-signature-line right" />
+//                   <div className="dc-signature-label right">
+//                     Signature
+//                   </div>
+//                 </div>
+
+//               </div>
+
+//             </div>
+
+//           </div>
+//         </div>
+
+//       </div>
+
+//       {/* ============================================================
+//           PRINT CSS (global once)
+//           ============================================================ */}
+
+//       <style
+//         dangerouslySetInnerHTML={{
+//           __html: DC_PRINT_STYLES
+//         }}
+//       />
+//     </>
+//   )
+// }
+
+// /* ================================================================
+//    DC PRINT + LAYOUT CSS
+//    ================================================================ */
+
+// const DC_PRINT_STYLES = `
+
+// /* ============================================================
+//    INVOICE-STYLE A4 SHEET (preview + print)
+//    ============================================================ */
+
+// .dc-sheet {
+//   width: 210mm;
+//   min-height: 297mm;
+//   background: #ffffff;
+//   margin: 0 auto;
+//   padding: 10mm 8mm 10mm 8mm;
+//   box-sizing: border-box;
+//   color: #111;
+//   font-family: Arial, Helvetica, sans-serif;
+//   position: relative;
+//   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+// }
+
+// .dc-title {
+//   text-align: center;
+//   font-size: 18px;
+//   line-height: 1;
+//   font-weight: 700;
+//   text-decoration: underline;
+//   margin: 0 0 3mm 0;
+// }
+
+// .dc-logo {
+//   width: 28mm;
+//   height: auto;
+//   object-fit: contain;
+//   display: block;
+//   margin: 0 0 1mm 0;
+// }
+
+// .dc-header {
+//   display: grid;
+//   grid-template-columns: 43% 57%;
+//   column-gap: 4mm;
+//   align-items: start;
+// }
+
+// .dc-left {
+//   font-size: 11px;
+//   line-height: 1.4;
+// }
+
+// .dc-label {
+//   font-weight: 700;
+//   text-decoration: underline;
+//   margin-bottom: 1mm;
+// }
+
+// .dc-address {
+//   white-space: pre-line;
+//   margin: 0;
+//   padding: 0;
+//   line-height: 1.35;
+// }
+
+// .dc-email {
+//   margin-top: 0.5mm;
+//   color: #0563c1;
+//   text-decoration: underline;
+// }
+
+// .dc-delivery-to {
+//   margin-top: 15.5mm;
+// }
+
+// .dc-delivery-to-name {
+//   font-weight: 600;
+// }
+
+// .dc-small-text {
+//   margin-top: 1mm;
+//   font-size: 10px;
+// }
+
+// .dc-info-box {
+//   width: 100%;
+//   border: 0.6px solid #b8b8b8;
+//   margin: 0;
+// }
+
+// .dc-info-row {
+//   display: grid;
+//   grid-template-columns: 50% 50%;
+//   min-height: 8mm;
+// }
+
+// .dc-info-cell {
+//   border: 0.6px solid #b8b8b8;
+//   display: flex;
+//   align-items: center;
+//   padding: 1.5mm 2mm;
+//   font-size: 10.5px;
+// }
+
+// .dc-info-label {
+//   font-weight: 600;
+//   text-align: right;
+//   justify-content: flex-end;
+//   padding-right: 3mm;
+// }
+
+// .dc-info-value {
+//   font-weight: 600;
+//   justify-content: flex-start;
+//   padding-left: 3mm;
+// }
+
+// .dc-products {
+//   margin-top: 5mm;
+//   width: 100%;
+// }
+
+// .dc-product-table {
+//   width: 100%;
+//   border-collapse: collapse;
+//   table-layout: fixed;
+//   margin: 0;
+// }
+
+// .dc-product-table th,
+// .dc-product-table td {
+//   border: 0.6px solid #b8b8b8;
+//   padding: 1.8mm 2mm;
+//   font-size: 10.5px;
+//   vertical-align: top;
+//   text-align: center;
+// }
+
+// .dc-product-table th {
+//   font-weight: 700;
+//   text-align: center;
+//   vertical-align: middle;
+// }
+
+// .dc-product-name {
+//   text-align: center !important;
+//   font-weight: 500;
+//   vertical-align: top !important;
+// }
+
+// .dc-multi-line {
+//   min-height: 5mm;
+//   line-height: 1.4;
+//   text-align: center;
+// }
+
+// .dc-signatures {
+//   margin-top: 18mm;
+//   width: 100%;
+//   font-size: 11px;
+// }
+
+// .dc-signature-top {
+//   display: grid;
+//   grid-template-columns: 1fr 1fr;
+//   column-gap: 20mm;
+//   margin-bottom: 7mm;
+// }
+
+// .dc-signature-heading {
+//   font-weight: 500;
+//   white-space: nowrap;
+// }
+
+// .dc-signature-heading.right {
+//   text-align: right;
+// }
+
+// .dc-signature-bottom {
+//   display: grid;
+//   grid-template-columns: 1fr 1fr;
+//   column-gap: 30mm;
+// }
+
+// .dc-signature-block {
+//   min-height: 25mm;
+//   position: relative;
+// }
+
+// .dc-signature-name {
+//   font-size: 11px;
+//   margin-bottom: 2mm;
+// }
+
+// .dc-signature-line {
+//   width: 72mm;
+//   border-bottom: 0.7px solid #333;
+// }
+
+// .dc-signature-line.right {
+//   margin-left: auto;
+// }
+
+// .dc-signature-label {
+//   margin-top: 4mm;
+//   font-size: 10px;
+//   color: #666;
+// }
+
+// .dc-signature-label.right {
+//   text-align: right;
+// }
+
+// /* ============================================================
+//    STAMP BOX — DRAGGABLE + RESIZABLE
+//    ============================================================ */
+
+// .dc-stamp-box {
+//   position: absolute;
+//   cursor: move;
+//   user-select: none;
+//   touch-action: none;
+//   border: 1px dashed rgba(0, 0, 0, 0.15);
+//   background: rgba(255, 255, 255, 0.8);
+//   z-index: 20;
+//   transition: border-color 0.15s ease;
+// }
+
+// .dc-stamp-box:hover {
+//   border-color: rgba(0, 0, 0, 0.35);
+// }
+
+// .dc-stamp-box.is-dragging {
+//   cursor: grabbing;
+//   border-color: #d97706;
+//   background: rgba(217, 119, 6, 0.04);
+// }
+
+// .dc-stamp-img {
+//   width: 100%;
+//   height: 100%;
+//   object-fit: contain;
+//   display: block;
+//   pointer-events: none;
+// }
+
+// .dc-stamp-hint {
+//   position: absolute;
+//   top: 1px;
+//   left: 1px;
+//   color: #d97706;
+//   opacity: 0.5;
+//   pointer-events: none;
+// }
+
+// .dc-stamp-resize {
+//   position: absolute;
+//   bottom: -4px;
+//   right: -4px;
+//   width: 12px;
+//   height: 12px;
+//   background: #d97706;
+//   border: 1px solid #ffffff;
+//   border-radius: 2px;
+//   cursor: nwse-resize;
+//   touch-action: none;
+// }
+
+// /* ============================================================
+//    PRINT
+//    ============================================================ */
+
+// @media print {
+
+//   @page {
+//     size: A4 portrait;
+//     margin: 0;
+//   }
+
+//   html, body {
+//     width: 210mm;
+//     min-height: 297mm;
+//     margin: 0 !important;
+//     padding: 0 !important;
+//     background: white !important;
+//   }
+
+//   body * {
+//     visibility: hidden !important;
+//   }
+
+//   .dc-print-area,
+//   .dc-print-area * {
+//     visibility: visible !important;
+//   }
+
+//   .dc-preview-overlay {
+//     position: static !important;
+//     width: 210mm !important;
+//     min-height: 297mm !important;
+//     padding: 0 !important;
+//     margin: 0 !important;
+//     overflow: visible !important;
+//     background: white !important;
+//   }
+
+//   .dc-preview-controls {
+//     display: none !important;
+//   }
+
+//   .dc-print-area {
+//     position: absolute !important;
+//     left: 0 !important;
+//     top: 0 !important;
+//     width: 210mm !important;
+//     margin: 0 !important;
+//     padding: 0 !important;
+//   }
+
+//   .dc-sheet {
+//     width: 210mm !important;
+//     min-height: 297mm !important;
+//     margin: 0 !important;
+//     padding: 10mm 8mm 10mm 8mm !important;
+//     box-sizing: border-box !important;
+//     box-shadow: none !important;
+//     position: relative !important;
+//   }
+
+//   /* ============================================
+//      STAMP ON PRINT
+//      ============================================ */
+
+//   .dc-stamp-box {
+//     border: none !important;
+//     background: transparent !important;
+//     -webkit-print-color-adjust: exact !important;
+//     print-color-adjust: exact !important;
+//   }
+
+//   .dc-stamp-hint,
+//   .dc-stamp-resize {
+//     display: none !important;
+//   }
+// }
+
+// `
+
+// /* ================================================================
+//    INSERT PRINT CSS ONCE
+//    ================================================================ */
+
+// if (typeof document !== 'undefined') {
+//   const styleId = 'dc-print-styles'
+
+//   const oldStyle = document.getElementById(styleId)
+
+//   if (!oldStyle) {
+//     const style = document.createElement('style')
+//     style.id = styleId
+//     style.innerHTML = DC_PRINT_STYLES
+//     document.head.appendChild(style)
+//   }
+// }
+
+
+
+// only view for specifc user
+
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { ref, push, onValue, update, get, set } from 'firebase/database'
 import {
@@ -25936,7 +31007,9 @@ import {
   Download,
   Search,
   X,
-  ArrowUpDown
+  ArrowUpDown,
+  Move,
+  Stamp as StampIcon
 } from 'lucide-react'
 
 import { db } from '../firebase'
@@ -25950,10 +31023,20 @@ import { Modal } from './Customers'
 import Loader from '../components/Loader'
 
 /* ============================================================
+   RESTRICTED EMAILS
+   ------------------------------------------------------------
+   Yahan jo bhi email add hogi, woh sirf VIEW kar sakegi.
+   Edit, Delete, PDF, New Challan — sab gayab ho jayenge.
+   ============================================================ */
+
+const RESTRICTED_EMAILS = [
+  'fatima@pearlnetworks.com.pk',
+  'talha@pearlnetworks.com.pk',
+  // aur emails yahan add karein
+]
+
+/* ============================================================
    FALLBACK COMPANY INFORMATION
-   ============================================================
-   Ye sirf fallback hain — agar kisi company ne apna logo,
-   address, ya email set nahi kiya to ye use honge.
    ============================================================ */
 
 const FALLBACK_COMPANY_NAME = 'Pearl Networks'
@@ -25967,6 +31050,17 @@ Karachi, 75660
 
 const FALLBACK_COMPANY_EMAIL = 'info@globalonesystem.com'
 const FALLBACK_COMPANY_PHONE = ''
+
+/* ============================================================
+   DEFAULT STAMP POSITION
+   ============================================================ */
+
+const DEFAULT_STAMP = {
+  x: 62,
+  y: 72,
+  width: 16,
+  height: 16
+}
 
 /* ============================================================
    DC NUMBER
@@ -26130,7 +31224,38 @@ const emptyItem = {
    ============================================================ */
 
 export default function DeliveryChallan() {
-  const { companyId, company } = useAuth()
+  const { companyId, company, currentUser, profile } = useAuth()
+
+  /* ============================================================
+     READ-ONLY CHECK (EMAIL-BASED)
+     ------------------------------------------------------------
+     AuthContext se email uthate hain:
+       - currentUser.email  (Firebase Auth)
+       - profile.email      (users/{uid}/email)
+       - company.email      (companies/{id}/email)
+     ============================================================ */
+
+  const currentEmail = useMemo(() => {
+    const candidates = [
+      currentUser?.email,
+      currentUser?.providerData?.[0]?.email,
+      profile?.email,
+      company?.email,
+    ]
+    for (const c of candidates) {
+      const s = String(c || '').trim().toLowerCase()
+      if (s) return s
+    }
+    return ''
+  }, [currentUser, profile, company])
+
+  const isReadOnly = useMemo(() => {
+    if (!currentEmail) return false
+    return RESTRICTED_EMAILS
+      .map((e) => String(e || '').trim().toLowerCase())
+      .filter(Boolean)
+      .includes(currentEmail)
+  }, [currentEmail])
 
   /* ============================================================
      DYNAMIC COMPANY INFO (with fallback)
@@ -26156,6 +31281,15 @@ export default function DeliveryChallan() {
     company?.phone ||
     FALLBACK_COMPANY_PHONE
 
+  /* ============================================================
+     STAMP FROM COMPANY PROFILE
+     ============================================================ */
+
+  const companyStamp =
+    company?.stampUrl ||
+    company?.stamp ||
+    ''
+
   const [customers, setCustomers] = useState(null)
   const [stock, setStock] = useState(null)
   const [challans, setChallans] = useState(null)
@@ -26178,6 +31312,12 @@ export default function DeliveryChallan() {
   const [selectedStockIds, setSelectedStockIds] = useState([])
 
   const [pickQty, setPickQty] = useState(1)
+
+  /* ============================================================
+     STAMP CHECKBOX
+     ============================================================ */
+
+  const [applyStamp, setApplyStamp] = useState(false)
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -26604,6 +31744,8 @@ export default function DeliveryChallan() {
 
     setPickQty(1)
 
+    setApplyStamp(false)
+
     setError('')
     setDcNumberError('')
     setEditingChallan(null)
@@ -26614,6 +31756,8 @@ export default function DeliveryChallan() {
      ============================================================ */
 
   const openNewChallan = async () => {
+    if (isReadOnly) return
+
     resetForm()
 
     setDcDate(todayISO())
@@ -26635,6 +31779,8 @@ export default function DeliveryChallan() {
      ============================================================ */
 
   function selectCustomer(customer) {
+    if (isReadOnly) return
+
     setCustomerId(customer.id)
 
     setCustomerSearch(
@@ -26655,6 +31801,7 @@ export default function DeliveryChallan() {
      ============================================================ */
 
   function clearCustomer() {
+    if (isReadOnly) return
     if (editingChallan) return
 
     setCustomerId('')
@@ -26667,6 +31814,8 @@ export default function DeliveryChallan() {
      ============================================================ */
 
   function openEditChallan(challan) {
+    if (isReadOnly) return
+
     setError('')
     setDcNumberError('')
 
@@ -26703,6 +31852,9 @@ export default function DeliveryChallan() {
       challan.date ||
       todayISO()
     )
+
+    /* Restore stamp checkbox */
+    setApplyStamp(challan.applyStamp === true)
 
     const oldItems =
       Array.isArray(
@@ -26750,6 +31902,8 @@ export default function DeliveryChallan() {
      ============================================================ */
 
   async function handleDeleteChallan(id) {
+    if (isReadOnly) return
+
     if (
       !confirm(
         'Are you sure you want to delete this Delivery Challan?'
@@ -26895,6 +32049,8 @@ export default function DeliveryChallan() {
   function toggleStockSelection(
     stockId
   ) {
+    if (isReadOnly) return
+
     setSelectedStockIds(
       (prev) => {
         if (
@@ -26919,6 +32075,8 @@ export default function DeliveryChallan() {
      ============================================================ */
 
   function selectAllFiltered() {
+    if (isReadOnly) return
+
     const filteredIds =
       filteredAvailableStock.map(
         (s) => s.id
@@ -26944,6 +32102,7 @@ export default function DeliveryChallan() {
      ============================================================ */
 
   function clearSelection() {
+    if (isReadOnly) return
     setSelectedStockIds([])
   }
 
@@ -26952,6 +32111,8 @@ export default function DeliveryChallan() {
      ============================================================ */
 
   function addSelectedItems() {
+    if (isReadOnly) return
+
     if (
       !stock ||
       selectedStockIds.length === 0
@@ -27125,6 +32286,8 @@ export default function DeliveryChallan() {
      ============================================================ */
 
   function addItem(stockId) {
+    if (isReadOnly) return
+
     if (!stock) return
 
     const selectedStock =
@@ -27259,6 +32422,8 @@ export default function DeliveryChallan() {
      ============================================================ */
 
   function removeItem(stockId) {
+    if (isReadOnly) return
+
     setItems(
       (prev) =>
         prev.filter(
@@ -27277,6 +32442,8 @@ export default function DeliveryChallan() {
     stockId,
     value
   ) {
+    if (isReadOnly) return
+
     const stockItem =
       stock?.find(
         (s) =>
@@ -27542,6 +32709,11 @@ export default function DeliveryChallan() {
   async function handleSubmit(e) {
     e.preventDefault()
 
+    if (isReadOnly) {
+      setError('You do not have permission to save challans.')
+      return
+    }
+
     setError('')
     setDcNumberError('')
 
@@ -27679,6 +32851,21 @@ export default function DeliveryChallan() {
           [`companies/${companyId}/challans/${editingChallan.id}/companyPhone`]:
             companyPhone,
 
+          /* ====================================================
+             STAMP — save stampUrl & position
+             ==================================================== */
+
+          [`companies/${companyId}/challans/${editingChallan.id}/applyStamp`]:
+            applyStamp,
+
+          [`companies/${companyId}/challans/${editingChallan.id}/stampUrl`]:
+            applyStamp ? (companyStamp || '') : '',
+
+          [`companies/${companyId}/challans/${editingChallan.id}/stampPos`]:
+            applyStamp && editingChallan
+              ? (editingChallan.stampPos || null)
+              : null,
+
           [`companies/${companyId}/challans/${editingChallan.id}/items`]:
             items,
 
@@ -27704,6 +32891,14 @@ export default function DeliveryChallan() {
           customer,
 
           items,
+
+          applyStamp,
+
+          stampUrl: applyStamp ? (companyStamp || '') : '',
+
+          stampPos: applyStamp
+            ? (editingChallan.stampPos || null)
+            : null,
 
           companyName,
           companyLogo,
@@ -27758,6 +32953,16 @@ export default function DeliveryChallan() {
             companyEmail,
             companyPhone,
 
+            /* ====================================================
+               STAMP
+               ==================================================== */
+
+            applyStamp,
+
+            stampUrl: applyStamp ? (companyStamp || '') : '',
+
+            stampPos: null,
+
             items,
 
             createdAt:
@@ -27793,6 +32998,12 @@ export default function DeliveryChallan() {
 
         items,
 
+        applyStamp,
+
+        stampUrl: applyStamp ? (companyStamp || '') : '',
+
+        stampPos: null,
+
         companyName,
         companyLogo,
         companyAddress,
@@ -27823,6 +33034,8 @@ export default function DeliveryChallan() {
      ============================================================ */
 
   function handleDownloadPdf(challan) {
+    if (isReadOnly) return
+
     const previewChallan = {
       id: challan.id,
 
@@ -27831,6 +33044,14 @@ export default function DeliveryChallan() {
       date: challan.date,
 
       items: challan.items || [],
+
+      applyStamp: challan.applyStamp === true,
+
+      stampUrl: challan.applyStamp === true
+        ? (challan.stampUrl || '')
+        : '',
+
+      stampPos: challan.stampPos || null,
 
       companyName: challan.companyName || companyName,
       companyLogo: challan.companyLogo || companyLogo,
@@ -27867,19 +33088,23 @@ export default function DeliveryChallan() {
           </h1>
 
           <p className="text-sm text-slateink mt-0.5">
-            Create a DC — stock will be automatically deducted.
+            {isReadOnly
+              ? 'You have view-only access to delivery challans.'
+              : 'Create a DC — stock will be automatically deducted.'}
           </p>
 
         </div>
 
-        <button
-          onClick={openNewChallan}
-          className="flex items-center gap-2 rounded-lg bg-ink text-white text-sm font-medium px-4 py-2.5 hover:bg-inkSoft transition-colors self-start"
-        >
-          <Plus size={16} />
+        {!isReadOnly && (
+          <button
+            onClick={openNewChallan}
+            className="flex items-center gap-2 rounded-lg bg-ink text-white text-sm font-medium px-4 py-2.5 hover:bg-inkSoft transition-colors self-start"
+          >
+            <Plus size={16} />
 
-          New Challan
-        </button>
+            New Challan
+          </button>
+        )}
 
       </div>
 
@@ -28079,6 +33304,17 @@ export default function DeliveryChallan() {
                                     c.items ||
                                     [],
 
+                                  applyStamp:
+                                    c.applyStamp === true,
+
+                                  stampUrl:
+                                    c.applyStamp === true
+                                      ? (c.stampUrl || '')
+                                      : '',
+
+                                  stampPos:
+                                    c.stampPos || null,
+
                                   companyName:
                                     c.companyName ||
                                     companyName,
@@ -28123,52 +33359,52 @@ export default function DeliveryChallan() {
 
                             </button>
 
-                            {/* EDIT */}
+                            {/* EDIT / PDF / DELETE — ONLY IF NOT READ-ONLY */}
 
-                            <button
-                              onClick={() =>
-                                openEditChallan(c)
-                              }
-                              className="flex items-center gap-1.5 text-ink text-xs font-medium hover:underline"
-                            >
+                            {!isReadOnly && (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    openEditChallan(c)
+                                  }
+                                  className="flex items-center gap-1.5 text-ink text-xs font-medium hover:underline"
+                                >
 
-                              <Pencil size={14} />
+                                  <Pencil size={14} />
 
-                              Edit
+                                  Edit
 
-                            </button>
+                                </button>
 
-                            {/* PDF */}
+                                <button
+                                  onClick={() =>
+                                    handleDownloadPdf(c)
+                                  }
+                                  className="flex items-center gap-1.5 text-red-600 text-xs font-medium hover:text-red-800"
+                                >
 
-                            <button
-                              onClick={() =>
-                                handleDownloadPdf(c)
-                              }
-                              className="flex items-center gap-1.5 text-red-600 text-xs font-medium hover:text-red-800"
-                            >
+                                  <Download size={14} />
 
-                              <Download size={14} />
+                                  PDF
 
-                              PDF
+                                </button>
 
-                            </button>
+                                <button
+                                  onClick={() =>
+                                    handleDeleteChallan(
+                                      c.id
+                                    )
+                                  }
+                                  className="flex items-center gap-1.5 text-coral text-xs font-medium hover:text-red-700"
+                                >
 
-                            {/* DELETE */}
+                                  <Trash2 size={14} />
 
-                            <button
-                              onClick={() =>
-                                handleDeleteChallan(
-                                  c.id
-                                )
-                              }
-                              className="flex items-center gap-1.5 text-coral text-xs font-medium hover:text-red-700"
-                            >
+                                  Delete
 
-                              <Trash2 size={14} />
-
-                              Delete
-
-                            </button>
+                                </button>
+                              </>
+                            )}
 
                           </div>
 
@@ -28191,7 +33427,7 @@ export default function DeliveryChallan() {
 
       {/* CREATE / EDIT */}
 
-      {showForm && (
+      {showForm && !isReadOnly && (
         <Modal
           title={
             editingChallan
@@ -28462,6 +33698,34 @@ export default function DeliveryChallan() {
                 }}
                 className="input mt-1"
               />
+
+            </div>
+
+            {/* ============================================
+                STAMP CHECKBOX
+                ============================================ */}
+
+            <div className="border border-line rounded-xl p-4 bg-paper/40">
+
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={applyStamp}
+                  onChange={(e) => setApplyStamp(e.target.checked)}
+                  className="mt-1 h-4 w-4 accent-teal-dark"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-ink flex items-center gap-1.5">
+                    <StampIcon size={12} />
+                    Include Stamp
+                  </span>
+                  <span className="block text-xs text-slateink mt-0.5">
+                    {companyStamp
+                      ? 'Stamp image will appear on the challan. You can drag and resize it in the preview.'
+                      : 'No stamp uploaded in company profile. Upload one in company settings to enable this.'}
+                  </span>
+                </span>
+              </label>
 
             </div>
 
@@ -28884,6 +34148,7 @@ export default function DeliveryChallan() {
           onClose={() =>
             setPreview(null)
           }
+          isReadOnly={isReadOnly}
         />
       )}
 
@@ -28893,379 +34158,260 @@ export default function DeliveryChallan() {
 
 /* =================================================================
    PRINTABLE DELIVERY CHALLAN
+   =================================================================
+   Ab ye Invoice page jaisa full-screen overlay hai:
+     - A4 sheet modal ke andar full dikhta hai (no horizontal scroll)
+     - Stamp draggable + resizable
+     - Print seedha render ki hui sheet ko print karta hai
+       (koi about:blank window nahi khulti)
    ================================================================= */
 
 export function PrintableModal({
   doc,
   type,
-  onClose
+  onClose,
+  isReadOnly
 }) {
-  const printRef =
-    useRef(null)
+  const { company, companyId } = useAuth()
 
   /* ============================================================
-     LIVE COMPANY DATA
-     ============================================================
-     PrintableModal now reads the live company object from
-     AuthContext, so even if a challan's saved snapshot is
-     missing companyLogo / companyAddress / etc., we can
-     still fall back to the CURRENT company data.
+     STAMP STATE (DRAG + RESIZE)
      ============================================================ */
 
-  const { company } = useAuth()
+  const [stampPos, setStampPos] = useState(() => {
+    if (doc.stampPos) {
+      return {
+        x: doc.stampPos.x ?? DEFAULT_STAMP.x,
+        y: doc.stampPos.y ?? DEFAULT_STAMP.y,
+        width: doc.stampPos.width ?? DEFAULT_STAMP.width,
+        height: doc.stampPos.height ?? DEFAULT_STAMP.height
+      }
+    }
+    return { ...DEFAULT_STAMP }
+  })
+
+  const [isStampDragging, setIsStampDragging] = useState(false)
+  const [isStampResizing, setIsStampResizing] = useState(false)
+
+  const stampDragOffset = useRef({ x: 0, y: 0 })
+  const sheetRef = useRef(null)
+  const stampRef = useRef(null)
 
   /* ============================================================
-     PRINT
+     SYNC STAMP POSITION WHEN doc CHANGES
      ============================================================ */
 
-  function handlePrint() {
-    if (!printRef.current)
-      return
+  useEffect(() => {
+    if (doc.stampPos) {
+      setStampPos({
+        x: doc.stampPos.x ?? DEFAULT_STAMP.x,
+        y: doc.stampPos.y ?? DEFAULT_STAMP.y,
+        width: doc.stampPos.width ?? DEFAULT_STAMP.width,
+        height: doc.stampPos.height ?? DEFAULT_STAMP.height
+      })
+    } else {
+      setStampPos({ ...DEFAULT_STAMP })
+    }
+  }, [doc.id])
 
-    const content =
-      printRef.current.innerHTML
+  /* ============================================================
+     SAVE STAMP POSITION TO FIREBASE (debounced)
+     ============================================================ */
 
-    const win =
-      window.open(
-        '',
-        '_blank',
-        'width=1000,height=900'
-      )
+  const saveStampTimeoutRef = useRef(null)
 
-    if (!win) {
-      alert(
-        'Popup blocked hai. Browser mein popup allow karein.'
-      )
+  function persistStampPos(pos) {
+    if (isReadOnly) return
+    if (!doc.id || !companyId) return
+    if (!doc.applyStamp) return
 
-      return
+    if (saveStampTimeoutRef.current) {
+      clearTimeout(saveStampTimeoutRef.current)
     }
 
-    win.document.open()
-
-    win.document.write(`
-
-<!doctype html>
-
-<html>
-
-<head>
-
-<meta charset="UTF-8" />
-
-<title>
-  ${type} ${doc.dcNumber || ''}
-</title>
-
-<style>
-
-@page {
-  size: A4;
-  margin: 10mm 8mm 10mm 8mm;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  margin: 0;
-  padding: 0;
-  width: 210mm;
-  min-height: 297mm;
-}
-
-body {
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-  color: #111;
-  background: #fff;
-}
-
-.dc-sheet {
-  width: 100%;           /* page ki width ke andar rahe */
-  min-height: auto;      /* fixed height nahi — content ke hisaab se grow kare */
-  padding: 0;            /* padding ab @page de raha hai */
-  margin: 0;
-  background: #fff;
-  position: relative;
-}
-
-.dc-title {
-  text-align: center;
-  font-size: 18px;
-  line-height: 1;
-  font-weight: 700;
-  text-decoration: underline;
-  margin:
-    0
-    0
-    3mm
-    0;
-}
-
-.dc-logo {
-  width: 28mm;
-  height: auto;
-  object-fit: contain;
-  display: block;
-  margin:
-    0
-    0
-    2mm
-    0;
-}
-
-.dc-header {
-  display: grid;
-  grid-template-columns:
-    43%
-    57%;
-  column-gap: 4mm;
-  align-items: start;
-}
-
-.dc-left {
-  font-size: 11px;
-  line-height: 1.4;
-}
-
-.dc-label {
-  font-weight: 700;
-  text-decoration: underline;
-  margin-bottom: 1mm;
-}
-
-.dc-company-name {
-  font-weight: 600;
-  margin: 0;
-  line-height: 1.3;
-}
-
-.dc-address {
-  white-space: pre-line;
-  margin: 0;
-  padding: 0;
-  line-height: 1.35;
-}
-
-.dc-email {
-  margin-top: 0.5mm;
-  color: #0563c1;
-  text-decoration: underline;
-}
-
-.dc-delivery-to {
-  margin-top: 3.5mm;
-}
-
-.dc-delivery-to-name {
-  font-weight: 600;
-}
-
-.dc-info-box {
-  width: 100%;
-  border:
-    0.6px
-    solid
-    #b8b8b8;
-  margin: 0;
-}
-
-.dc-info-row {
-  display: grid;
-  grid-template-columns:
-    50%
-    50%;
-  min-height: 8mm;
-}
-
-.dc-info-cell {
-  border:
-    0.6px
-    solid
-    #b8b8b8;
-  display: flex;
-  align-items: center;
-  padding:
-    1.5mm
-    2mm;
-  font-size: 10.5px;
-}
-
-.dc-info-label {
-  font-weight: 600;
-  text-align: right;
-  justify-content: flex-end;
-  padding-right: 3mm;
-}
-
-.dc-info-value {
-  font-weight: 600;
-  justify-content: flex-start;
-  padding-left: 3mm;
-}
-
-.dc-products {
-  margin-top: 5mm;
-  width: 100%;
-}
-
-.dc-product-table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-  margin: 0;
-}
-
-.dc-product-table col:nth-child(1) {
-  width: 9%;
-}
-
-.dc-product-table col:nth-child(2) {
-  width: 30%;
-}
-
-.dc-product-table col:nth-child(3) {
-  width: 14%;
-}
-
-.dc-product-table col:nth-child(4) {
-  width: 25%;
-}
-
-.dc-product-table col:nth-child(5) {
-  width: 22%;
-}
-
-.dc-product-table th,
-.dc-product-table td {
-  border:
-    0.6px
-    solid
-    #b8b8b8;
-  padding:
-    1.8mm
-    2mm;
-  font-size: 10.5px;
-  vertical-align: top;
-}
-
-.dc-product-table th {
-  font-weight: 700;
-  text-align: center;
-  vertical-align: middle;
-}
-
-.dc-product-table td {
-  text-align: center;
-}
-
-.dc-product-name {
-  text-align: center !important;
-  font-weight: 500;
-  vertical-align: top !important;
-}
-
-.dc-multi-line {
-  min-height: 5mm;
-  line-height: 1.4;
-  text-align: center;
-}
-
-.dc-signatures {
-  margin-top: 18mm;
-  width: 100%;
-  font-size: 11px;
-}
-
-.dc-signature-top {
-  display: grid;
-  grid-template-columns:
-    1fr
-    1fr;
-  column-gap: 20mm;
-  margin-bottom: 7mm;
-}
-
-.dc-signature-heading {
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.dc-signature-heading.right {
-  text-align: right;
-}
-
-.dc-signature-bottom {
-  display: grid;
-  grid-template-columns:
-    1fr
-    1fr;
-  column-gap: 30mm;
-}
-
-.dc-signature-block {
-  min-height: 25mm;
-  position: relative;
-}
-
-.dc-signature-name {
-  font-size: 11px;
-  margin-bottom: 2mm;
-}
-
-.dc-signature-line {
-  width: 72mm;
-  border-bottom:
-    0.7px
-    solid
-    #333;
-}
-
-.dc-signature-line.right {
-  margin-left: auto;
-}
-
-@media print {
-  html, body {
-    width: auto;
-    min-height: auto;
-    margin: 0;
-    padding: 0;
-    background: #fff;
-  }
-
-  .dc-sheet {
-    width: 100%;
-    min-height: auto;
-    margin: 0;
-    padding: 0;
-  }
-}
-
-</style>
-
-</head>
-
-<body>
-
-${content}
-
-</body>
-
-</html>
-
-`)
-
-    win.document.close()
-
-    setTimeout(() => {
-      win.focus()
-      win.print()
+    saveStampTimeoutRef.current = setTimeout(async () => {
+      try {
+        await update(
+          ref(db, `companies/${companyId}/challans/${doc.id}`),
+          { stampPos: pos }
+        )
+      } catch (err) {
+        console.error('Stamp position save failed:', err)
+      }
     }, 500)
+  }
+
+  /* ============================================================
+     STAMP — START DRAG
+     ============================================================ */
+
+  function handleStampMouseDown(e) {
+    if (isReadOnly) return
+    if (!doc.applyStamp || !doc.stampUrl) return
+    if (!stampRef.current) return
+    e.preventDefault()
+    e.stopPropagation()
+
+    const stampRect = stampRef.current.getBoundingClientRect()
+
+    stampDragOffset.current = {
+      x: e.clientX - stampRect.left,
+      y: e.clientY - stampRect.top
+    }
+
+    setIsStampDragging(true)
+  }
+
+  function handleStampResizeMouseDown(e) {
+    if (isReadOnly) return
+    e.preventDefault()
+    e.stopPropagation()
+    setIsStampResizing(true)
+  }
+
+  /* ============================================================
+     MOUSE MOVE — STAMP DRAG/RESIZE
+     ============================================================ */
+
+  useEffect(() => {
+    if (!isStampDragging && !isStampResizing) return
+
+    function handleMouseMove(e) {
+      const sheet = sheetRef.current
+      if (!sheet) return
+
+      const sheetRect = sheet.getBoundingClientRect()
+
+      if (isStampDragging) {
+        const xPx = e.clientX - sheetRect.left - stampDragOffset.current.x
+        const yPx = e.clientY - sheetRect.top - stampDragOffset.current.y
+
+        const xPercent = (xPx / sheetRect.width) * 100
+        const yPercent = (yPx / sheetRect.height) * 100
+
+        const clampedX = Math.min(100 - stampPos.width, Math.max(0, xPercent))
+        const clampedY = Math.min(100 - stampPos.height, Math.max(0, yPercent))
+
+        setStampPos(prev => ({ ...prev, x: clampedX, y: clampedY }))
+      } else if (isStampResizing) {
+        const xPx = e.clientX - sheetRect.left
+        const yPx = e.clientY - sheetRect.top
+
+        const xPercent = (xPx / sheetRect.width) * 100
+        const yPercent = (yPx / sheetRect.height) * 100
+
+        const newWidth = Math.min(80, Math.max(5, xPercent - stampPos.x))
+        const newHeight = Math.min(80, Math.max(5, yPercent - stampPos.y))
+
+        setStampPos(prev => ({ ...prev, width: newWidth, height: newHeight }))
+      }
+    }
+
+    function handleMouseUp() {
+      if (isStampDragging) {
+        setIsStampDragging(false)
+        persistStampPos(stampPos)
+      }
+      if (isStampResizing) {
+        setIsStampResizing(false)
+        persistStampPos(stampPos)
+      }
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isStampDragging, isStampResizing, stampPos])
+
+  /* ============================================================
+     TOUCH SUPPORT — STAMP
+     ============================================================ */
+
+  function handleStampTouchStart(e) {
+    if (isReadOnly) return
+    if (!doc.applyStamp || !doc.stampUrl) return
+    if (!stampRef.current) return
+    if (!e.touches[0]) return
+
+    const stampRect = stampRef.current.getBoundingClientRect()
+    const touch = e.touches[0]
+
+    stampDragOffset.current = {
+      x: touch.clientX - stampRect.left,
+      y: touch.clientY - stampRect.top
+    }
+
+    setIsStampDragging(true)
+  }
+
+  useEffect(() => {
+    if (!isStampDragging && !isStampResizing) return
+
+    function handleTouchMove(e) {
+      if (!e.touches[0]) return
+      e.preventDefault()
+
+      const sheet = sheetRef.current
+      if (!sheet) return
+
+      const sheetRect = sheet.getBoundingClientRect()
+      const touch = e.touches[0]
+
+      if (isStampDragging) {
+        const xPx = touch.clientX - sheetRect.left - stampDragOffset.current.x
+        const yPx = touch.clientY - sheetRect.top - stampDragOffset.current.y
+
+        const xPercent = (xPx / sheetRect.width) * 100
+        const yPercent = (yPx / sheetRect.height) * 100
+
+        const clampedX = Math.min(100 - stampPos.width, Math.max(0, xPercent))
+        const clampedY = Math.min(100 - stampPos.height, Math.max(0, yPercent))
+
+        setStampPos(prev => ({ ...prev, x: clampedX, y: clampedY }))
+      } else if (isStampResizing) {
+        const xPx = touch.clientX - sheetRect.left
+        const yPx = touch.clientY - sheetRect.top
+
+        const xPercent = (xPx / sheetRect.width) * 100
+        const yPercent = (yPx / sheetRect.height) * 100
+
+        const newWidth = Math.min(80, Math.max(5, xPercent - stampPos.x))
+        const newHeight = Math.min(80, Math.max(5, yPercent - stampPos.y))
+
+        setStampPos(prev => ({ ...prev, width: newWidth, height: newHeight }))
+      }
+    }
+
+    function handleTouchEnd() {
+      if (isStampDragging) {
+        setIsStampDragging(false)
+        persistStampPos(stampPos)
+      }
+      if (isStampResizing) {
+        setIsStampResizing(false)
+        persistStampPos(stampPos)
+      }
+    }
+
+    document.addEventListener('touchmove', handleTouchMove, { passive: false })
+    document.addEventListener('touchend', handleTouchEnd)
+
+    return () => {
+      document.removeEventListener('touchmove', handleTouchMove)
+      document.removeEventListener('touchend', handleTouchEnd)
+    }
+  }, [isStampDragging, isStampResizing, stampPos])
+
+  /* ============================================================
+     PRINT — Invoice style (print the rendered preview directly)
+     ============================================================ */
+
+  function printInvoice() {
+    window.print()
   }
 
   /* ============================================================
@@ -29436,16 +34582,6 @@ ${content}
 
   /* ============================================================
      DYNAMIC COMPANY INFO
-     ============================================================
-     Priority:
-       1. doc.companyLogo / companyName / etc. (saved snapshot)
-       2. Live company from AuthContext
-       3. Hard fallback constants
-
-     This ensures:
-       - New challans use saved snapshot
-       - Old challans (before this feature) use live company data
-       - If company has no logo yet, only then fallback
      ============================================================ */
 
   const companyName =
@@ -29489,1040 +34625,714 @@ ${content}
     doc.customer?.phone ||
     ''
 
+  const showStamp =
+    doc.applyStamp === true &&
+    doc.stampUrl &&
+    doc.stampUrl.trim() !== ''
+
   return (
-    <Modal
-      title={`${type} — ${
-        doc.dcNumber || ''
-      }`}
-      onClose={onClose}
-      wide
-    >
+    <>
+      {/* ============================================================
+          FULL SCREEN PREVIEW OVERLAY (Invoice style)
+          ============================================================ */}
 
-      <div className="flex gap-3 mb-4 no-print">
+      <div className="dc-preview-overlay fixed inset-0 z-[9999] bg-black/60 overflow-y-auto p-4 sm:p-8">
 
-        <button
-          onClick={handlePrint}
-          className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-ink text-white text-sm font-medium py-2.5 hover:bg-inkSoft"
-        >
+        <div className="dc-preview-controls max-w-[900px] mx-auto mb-4 flex items-center justify-between gap-3">
 
-          <Printer size={16} />
-
-          Print / Save as PDF
-
-        </button>
-
-        <button
-          onClick={onClose}
-          className="px-5 rounded-lg border border-line text-ink text-sm font-medium py-2.5 hover:bg-paper"
-        >
-
-          Close
-
-        </button>
-
-      </div>
-
-      <div
-        ref={printRef}
-        style={{
-          background:
-            '#ffffff',
-
-          padding: '0',
-
-          overflow: 'hidden',
-
-          width: '210mm',
-
-          margin: '0 auto'
-        }}
-      >
-
-        <div
-          className="dc-sheet"
-          style={{
-            width: '210mm',
-
-            minHeight:
-              '297mm',
-
-            margin:
-              '0 auto',
-
-            background:
-              '#ffffff',
-
-            padding:
-              '10mm 8mm 10mm 8mm',
-
-            boxSizing:
-              'border-box',
-
-            color: '#111',
-
-            fontFamily:
-              'Arial, Helvetica, sans-serif',
-
-            overflow: 'hidden'
-          }}
-        >
-
-          {/* TITLE */}
-
-          <div
-            className="dc-title"
-            style={{
-              textAlign:
-                'center',
-
-              fontSize:
-                '18px',
-
-              lineHeight:
-                '1',
-
-              fontWeight: 700,
-
-              textDecoration:
-                'underline',
-
-              margin:
-                '0 0 3mm 0'
-            }}
-          >
-
-            DELIVERY CHALLAN
-
-          </div>
-
-          {/* LOGO */}
-
-          <img
-            src={companyLogo}
-            alt={companyName}
-            className="dc-logo"
-            style={{
-              width: '28mm',
-
-              height: 'auto',
-
-              objectFit:
-                'contain',
-
-              display:
-                'block',
-
-              margin:
-                '0 0 1mm 0'
-            }}
-            onError={(e) => {
-              // If uploaded logo fails, fall back to default
-              if (e.currentTarget.src !== window.location.origin + FALLBACK_COMPANY_LOGO) {
-                e.currentTarget.src = FALLBACK_COMPANY_LOGO
-              }
-            }}
-          />
-
-          {/* HEADER */}
-
-          <div
-            className="dc-header"
-            style={{
-              display:
-                'grid',
-
-              gridTemplateColumns:
-                '43% 57%',
-
-              columnGap:
-                '4mm',
-
-              alignItems:
-                'start'
-            }}
-          >
-
-            {/* LEFT */}
-
-            <div
-              className="dc-left"
-              style={{
-                fontSize:
-                  '11px',
-
-                lineHeight:
-                  1.4
-              }}
-            >
-
-              <div
-                className="dc-address"
-                style={{
-                  whiteSpace:
-                    'pre-line',
-
-                  margin: 0,
-
-                  padding: 0,
-
-                  lineHeight:
-                    1.35
-                }}
-              >
-
-                {companyAddress}
-
-              </div>
-
-              {companyPhone && (
-                <div
-                  style={{
-                    marginTop:
-                      '0.5mm'
-                  }}
-                >
-
-                  {companyPhone}
-
-                </div>
+          <div className="min-w-0">
+            <p className="text-white font-semibold text-sm">
+              {type} Preview
+            </p>
+            <p className="text-white/70 text-xs truncate">
+              {doc.dcNumber}
+              {showStamp && !isReadOnly && (
+                <span className="ml-2 inline-flex items-center gap-1 text-white/60">
+                  <Move size={10} /> Stamp movable
+                </span>
               )}
-
-              {companyEmail && (
-                <div
-                  className="dc-email"
-                  style={{
-                    marginTop:
-                      '0.5mm',
-
-                    color:
-                      '#0563c1',
-
-                    textDecoration:
-                      'underline'
-                  }}
-                >
-
-                  {companyEmail}
-
-                </div>
-              )}
-
-              <div
-                className="dc-delivery-to"
-                style={{
-                  marginTop:
-                    '15.5mm'
-                }}
-              >
-
-                <div
-                  className="dc-label"
-                  style={{
-                    fontWeight: 700,
-
-                    textDecoration:
-                      'underline'
-                  }}
-                >
-
-                  Delivery To:
-
-                </div>
-
-                {customerCompany && (
-                  <div
-                    className="dc-delivery-to-name"
-                    style={{
-                      fontWeight: 600
-                    }}
-                  >
-                    M/S. {customerCompany}
-                  </div>
-                )}
-
-                {!customerCompany && customerName && (
-                  <div
-                    className="dc-delivery-to-name"
-                    style={{
-                      fontWeight: 600
-                    }}
-                  >
-                    {customerName}
-                  </div>
-                )}
-
-                {customerCompany && customerName && customerName !== customerCompany && (
-                  <div style={{ marginTop: '0.5mm' }}>
-                    {customerName}
-                  </div>
-                )}
-
-                {customerAddress && (
-                  <div
-                    style={{
-                      marginTop:
-                        '1mm',
-
-                      fontSize:
-                        '10px'
-                    }}
-                  >
-
-                    {
-                      customerAddress
-                    }
-
-                  </div>
-                )}
-
-                {customerPhone && (
-                  <div
-                    style={{
-                      fontSize:
-                        '10px'
-                    }}
-                  >
-
-                    Phone:{' '}
-                    {
-                      customerPhone
-                    }
-
-                  </div>
-                )}
-
-              </div>
-
-            </div>
-
-            {/* RIGHT INFO BOX */}
-
-            <div>
-
-              <div
-                className="dc-info-box"
-                style={{
-                  width: '100%',
-
-                  border:
-                    '0.6px solid #b8b8b8',
-
-                  margin: 0
-                }}
-              >
-
-                <div
-                  className="dc-info-row"
-                  style={{
-                    display:
-                      'grid',
-
-                    gridTemplateColumns:
-                      '50% 50%',
-
-                    minHeight:
-                      '8mm'
-                  }}
-                >
-
-                  <div
-                    className="dc-info-cell dc-info-label"
-                    style={{
-                      border:
-                        '0.6px solid #b8b8b8',
-
-                      display:
-                        'flex',
-
-                      alignItems:
-                        'center',
-
-                      justifyContent:
-                        'flex-end',
-
-                      padding:
-                        '1.5mm 3mm',
-
-                      fontSize:
-                        '10.5px',
-
-                      fontWeight: 600
-                    }}
-                  >
-
-                    Delivery Challan No:
-
-                  </div>
-
-                  <div
-                    className="dc-info-cell dc-info-value"
-                    style={{
-                      border:
-                        '0.6px solid #b8b8b8',
-
-                      display:
-                        'flex',
-
-                      alignItems:
-                        'center',
-
-                      justifyContent:
-                        'flex-start',
-
-                      padding:
-                        '1.5mm 3mm',
-
-                      fontSize:
-                        '10.5px',
-
-                      fontWeight: 600
-                    }}
-                  >
-
-                    {doc.dcNumber}
-
-                  </div>
-
-                </div>
-
-                <div
-                  className="dc-info-row"
-                  style={{
-                    display:
-                      'grid',
-
-                    gridTemplateColumns:
-                      '50% 50%',
-
-                    minHeight:
-                      '8mm'
-                  }}
-                >
-
-                  <div
-                    className="dc-info-cell dc-info-label"
-                    style={{
-                      border:
-                        '0.6px solid #b8b8b8',
-
-                      display:
-                        'flex',
-
-                      alignItems:
-                        'center',
-
-                      justifyContent:
-                        'flex-end',
-
-                      padding:
-                        '1.5mm 3mm',
-
-                      fontSize:
-                        '10.5px',
-
-                      fontWeight: 600
-                    }}
-                  >
-
-                    Date:
-
-                  </div>
-
-                  <div
-                    className="dc-info-cell dc-info-value"
-                    style={{
-                      border:
-                        '0.6px solid #b8b8b8',
-
-                      display:
-                        'flex',
-
-                      alignItems:
-                        'center',
-
-                      justifyContent:
-                        'flex-start',
-
-                      padding:
-                        '1.5mm 3mm',
-
-                      fontSize:
-                        '10.5px',
-
-                      fontWeight: 600
-                    }}
-                  >
-
-                    {formatDate(
-                      doc.date
-                    )}
-
-                  </div>
-
-                </div>
-
-              </div>
-
-            </div>
-
+            </p>
           </div>
 
-          {/* PRODUCT TABLE */}
-
-          <div
-            className="dc-products"
-            style={{
-              marginTop:
-                '5mm',
-
-              width: '100%'
-            }}
-          >
-
-            <table
-              className="dc-product-table"
-              style={{
-                width: '100%',
-
-                borderCollapse:
-                  'collapse',
-
-                tableLayout:
-                  'fixed',
-
-                margin: 0
-              }}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={printInvoice}
+              className="inline-flex items-center gap-2 rounded-lg bg-white text-ink px-4 py-2 text-sm font-medium hover:bg-gray-100"
             >
-
-              <colgroup>
-
-                <col style={{ width: '9%' }} />
-                <col style={{ width: '30%' }} />
-                <col style={{ width: '14%' }} />
-                <col style={{ width: '25%' }} />
-                <col style={{ width: '22%' }} />
-
-              </colgroup>
-
-              <thead>
-
-                <tr>
-
-                  <th
-                    style={{
-                      border:
-                        '0.6px solid #b8b8b8',
-
-                      padding:
-                        '1.8mm 2mm',
-
-                      fontSize:
-                        '10.5px',
-
-                      textAlign:
-                        'center',
-
-                      fontWeight: 700
-                    }}
-                  >
-                    S.No.
-                  </th>
-
-                  <th
-                    style={{
-                      border:
-                        '0.6px solid #b8b8b8',
-
-                      padding:
-                        '1.8mm 2mm',
-
-                      fontSize:
-                        '10.5px',
-
-                      textAlign:
-                        'center',
-
-                      fontWeight: 700
-                    }}
-                  >
-                    Product Name
-                  </th>
-
-                  <th
-                    style={{
-                      border:
-                        '0.6px solid #b8b8b8',
-
-                      padding:
-                        '1.8mm 2mm',
-
-                      fontSize:
-                        '10.5px',
-
-                      textAlign:
-                        'center',
-
-                      fontWeight: 700
-                    }}
-                  >
-                    Quantity
-                  </th>
-
-                  <th
-                    style={{
-                      border:
-                        '0.6px solid #b8b8b8',
-
-                      padding:
-                        '1.8mm 2mm',
-
-                      fontSize:
-                        '10.5px',
-
-                      textAlign:
-                        'center',
-
-                      fontWeight: 700
-                    }}
-                  >
-                    Mac Address
-                  </th>
-
-                  <th
-                    style={{
-                      border:
-                        '0.6px solid #b8b8b8',
-
-                      padding:
-                        '1.8mm 2mm',
-
-                      fontSize:
-                        '10.5px',
-
-                      textAlign:
-                        'center',
-
-                      fontWeight: 700
-                    }}
-                  >
-                    Serial Number
-                  </th>
-
-                </tr>
-
-              </thead>
-
-              <tbody>
-
-                {printableItems.map(
-                  (
-                    item,
-                    index
-                  ) => {
-
-                    const macLines =
-                      item.macLines ||
-                      []
-
-                    const serialLines =
-                      item.serialLines ||
-                      []
-
-                    const maxLines =
-                      Math.max(
-                        1,
-                        macLines.length,
-                        serialLines.length
-                      )
-
-                    return (
-
-                      <tr
-                        key={`${item.name}-${index}`}
-                      >
-
-                        <td
-                          style={{
-                            border:
-                              '0.6px solid #b8b8b8',
-
-                            padding:
-                              '1.8mm 2mm',
-
-                            fontSize:
-                              '10.5px',
-
-                            textAlign:
-                              'center',
-
-                            verticalAlign:
-                              'top'
-                          }}
-                        >
-
-                          {index + 1}
-
-                        </td>
-
-                        <td
-                          className="dc-product-name"
-                          style={{
-                            border:
-                              '0.6px solid #b8b8b8',
-
-                            padding:
-                              '1.8mm 2mm',
-
-                            fontSize:
-                              '10.5px',
-
-                            textAlign:
-                              'center',
-
-                            verticalAlign:
-                              'top',
-
-                            fontWeight: 500
-                          }}
-                        >
-
-                          {item.name}
-
-                        </td>
-
-                        <td
-                          style={{
-                            border:
-                              '0.6px solid #b8b8b8',
-
-                            padding:
-                              '1.8mm 2mm',
-
-                            fontSize:
-                              '10.5px',
-
-                            textAlign:
-                              'center',
-
-                            verticalAlign:
-                              'top'
-                          }}
-                        >
-
-                          {item.qty}
-
-                        </td>
-
-                        <td
-                          style={{
-                            border:
-                              '0.6px solid #b8b8b8',
-
-                            padding:
-                              '1.8mm 2mm',
-
-                            fontSize:
-                              '10.5px',
-
-                            textAlign:
-                              'center',
-
-                            verticalAlign:
-                              'top'
-                          }}
-                        >
-
-                          {Array.from({
-                            length:
-                              maxLines
-                          }).map(
-                            (
-                              _,
-                              macIndex
-                            ) => (
-
-                              <div
-                                key={`mac-${macIndex}`}
-                                className="dc-multi-line"
-                              >
-
-                                {
-                                  macLines[
-                                    macIndex
-                                  ] || ''
-                                }
-
-                              </div>
-
-                            )
-                          )}
-
-                        </td>
-
-                        <td
-                          style={{
-                            border:
-                              '0.6px solid #b8b8b8',
-
-                            padding:
-                              '1.8mm 2mm',
-
-                            fontSize:
-                              '10.5px',
-
-                            textAlign:
-                              'center',
-
-                            verticalAlign:
-                              'top'
-                          }}
-                        >
-
-                          {Array.from({
-                            length:
-                              maxLines
-                          }).map(
-                            (
-                              _,
-                              serialIndex
-                            ) => (
-
-                              <div
-                                key={`serial-${serialIndex}`}
-                                className="dc-multi-line"
-                              >
-
-                                {
-                                  serialLines[
-                                    serialIndex
-                                  ] || ''
-                                }
-
-                              </div>
-
-                            )
-                          )}
-
-                        </td>
-
-                      </tr>
-
-                    )
-                  }
-                )}
-
-              </tbody>
-
-            </table>
-
-          </div>
-
-          {/* SIGNATURES */}
-
-          <div
-            className="dc-signatures"
-            style={{
-              marginTop:
-                '18mm',
-
-              width: '100%',
-
-              fontSize:
-                '11px'
-            }}
-          >
-
-            <div
-              className="dc-signature-top"
-              style={{
-                display:
-                  'grid',
-
-                gridTemplateColumns:
-                  '1fr 1fr',
-
-                columnGap:
-                  '20mm',
-
-                marginBottom:
-                  '7mm'
-              }}
+              <Printer size={16} />
+              Print / Save as PDF
+            </button>
+            <button
+              onClick={onClose}
+              className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-white/10 text-white hover:bg-white/20"
             >
-
-              <div
-                className="dc-signature-heading"
-                style={{
-                  fontWeight: 500,
-
-                  whiteSpace:
-                    'nowrap'
-                }}
-              >
-
-                Received In Sound Condition By:
-
-              </div>
-
-              <div
-                className="dc-signature-heading right"
-                style={{
-                  fontWeight: 500,
-
-                  whiteSpace:
-                    'nowrap',
-
-                  textAlign:
-                    'right'
-                }}
-              >
-
-                Delivered By:
-
-              </div>
-
-            </div>
-
-            <div
-              className="dc-signature-bottom"
-              style={{
-                display:
-                  'grid',
-
-                gridTemplateColumns:
-                  '1fr 1fr',
-
-                columnGap:
-                  '30mm'
-              }}
-            >
-
-              <div
-                className="dc-signature-block"
-                style={{
-                  minHeight:
-                    '25mm'
-                }}
-              >
-
-                <div
-                  className="dc-signature-name"
-                  style={{
-                    fontSize:
-                      '11px',
-
-                    marginBottom:
-                      '2mm'
-                  }}
-                >
-
-                  Name:
-
-                </div>
-
-                <div
-                  className="dc-signature-line"
-                  style={{
-                    width: '72mm',
-
-                    borderBottom:
-                      '0.7px solid #333'
-                  }}
-                />
-
-                <div
-                  style={{
-                    marginTop:
-                      '4mm',
-
-                    fontSize:
-                      '10px',
-
-                    color:
-                      '#666'
-                  }}
-                >
-
-                  Signature
-
-                </div>
-
-              </div>
-
-              <div
-                className="dc-signature-block"
-                style={{
-                  minHeight:
-                    '25mm'
-                }}
-              >
-
-                <div
-                  className="dc-signature-line right"
-                  style={{
-                    width: '72mm',
-
-                    borderBottom:
-                      '0.7px solid #333',
-
-                    marginLeft:
-                      'auto'
-                  }}
-                />
-
-                <div
-                  style={{
-                    marginTop:
-                      '4mm',
-
-                    fontSize:
-                      '10px',
-
-                    color:
-                      '#666',
-
-                    textAlign:
-                      'right'
-                  }}
-                >
-
-                  Signature
-
-                </div>
-
-              </div>
-
-            </div>
-
+              <X size={18} />
+            </button>
           </div>
 
         </div>
 
+        <div className="dc-print-area" id="dc-print-area">
+          <div className="dc-sheet" ref={sheetRef}>
+
+            {/* TITLE */}
+            <div className="dc-title">
+              DELIVERY CHALLAN
+            </div>
+
+            {/* LOGO */}
+            <img
+              src={companyLogo}
+              alt={companyName}
+              className="dc-logo"
+              onError={(e) => {
+                if (e.currentTarget.src !== window.location.origin + FALLBACK_COMPANY_LOGO) {
+                  e.currentTarget.src = FALLBACK_COMPANY_LOGO
+                }
+              }}
+            />
+
+            {/* HEADER */}
+            <div className="dc-header">
+
+              {/* LEFT */}
+              <div className="dc-left">
+                <div className="dc-address">
+                  {companyAddress}
+                </div>
+
+                {companyPhone && (
+                  <div>{companyPhone}</div>
+                )}
+
+                {companyEmail && (
+                  <div className="dc-email">
+                    {companyEmail}
+                  </div>
+                )}
+
+                <div className="dc-delivery-to">
+                  <div className="dc-label">
+                    Delivery To:
+                  </div>
+
+                  {customerCompany && (
+                    <div className="dc-delivery-to-name">
+                      M/S. {customerCompany}
+                    </div>
+                  )}
+
+                  {!customerCompany && customerName && (
+                    <div className="dc-delivery-to-name">
+                      {customerName}
+                    </div>
+                  )}
+
+                  {customerCompany && customerName && customerName !== customerCompany && (
+                    <div>
+                      {customerName}
+                    </div>
+                  )}
+
+                  {customerAddress && (
+                    <div className="dc-small-text">
+                      {customerAddress}
+                    </div>
+                  )}
+
+                  {customerPhone && (
+                    <div className="dc-small-text">
+                      Phone: {customerPhone}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* RIGHT INFO BOX */}
+              <div>
+                <div className="dc-info-box">
+                  <div className="dc-info-row">
+                    <div className="dc-info-cell dc-info-label">
+                      Delivery Challan No:
+                    </div>
+                    <div className="dc-info-cell dc-info-value">
+                      {doc.dcNumber}
+                    </div>
+                  </div>
+                  <div className="dc-info-row">
+                    <div className="dc-info-cell dc-info-label">
+                      Date:
+                    </div>
+                    <div className="dc-info-cell dc-info-value">
+                      {formatDate(doc.date)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* PRODUCT TABLE */}
+            <div className="dc-products">
+              <table className="dc-product-table">
+                <colgroup>
+                  <col style={{ width: '9%' }} />
+                  <col style={{ width: '30%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '25%' }} />
+                  <col style={{ width: '22%' }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>S.No.</th>
+                    <th>Product Name</th>
+                    <th>Quantity</th>
+                    <th>Mac Address</th>
+                    <th>Serial Number</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {printableItems.map(
+                    (
+                      item,
+                      index
+                    ) => {
+
+                      const macLines =
+                        item.macLines ||
+                        []
+
+                      const serialLines =
+                        item.serialLines ||
+                        []
+
+                      const maxLines =
+                        Math.max(
+                          1,
+                          macLines.length,
+                          serialLines.length
+                        )
+
+                      return (
+
+                        <tr key={`${item.name}-${index}`}>
+                          <td>{index + 1}</td>
+                          <td className="dc-product-name">{item.name}</td>
+                          <td>{item.qty}</td>
+                          <td>
+                            {Array.from({
+                              length:
+                                maxLines
+                            }).map(
+                              (
+                                _,
+                                macIndex
+                              ) => (
+
+                                <div
+                                  key={`mac-${macIndex}`}
+                                  className="dc-multi-line"
+                                >
+
+                                  {
+                                    macLines[
+                                      macIndex
+                                    ] || ''
+                                  }
+
+                                </div>
+
+                              )
+                            )}
+                          </td>
+                          <td>
+                            {Array.from({
+                              length:
+                                maxLines
+                            }).map(
+                              (
+                                _,
+                                serialIndex
+                              ) => (
+
+                                <div
+                                  key={`serial-${serialIndex}`}
+                                  className="dc-multi-line"
+                                >
+
+                                  {
+                                    serialLines[
+                                      serialIndex
+                                    ] || ''
+                                  }
+
+                                </div>
+
+                              )
+                            )}
+                          </td>
+                        </tr>
+
+                      )
+                    }
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* STAMP — DRAGGABLE & RESIZABLE */}
+            {showStamp && (
+              <div
+                className={`dc-stamp-box ${isStampDragging ? 'is-dragging' : ''}`}
+                style={{
+                  left: `${stampPos.x}%`,
+                  top: `${stampPos.y}%`,
+                  width: `${stampPos.width}%`,
+                  height: `${stampPos.height}%`
+                }}
+                ref={stampRef}
+                onMouseDown={handleStampMouseDown}
+                onTouchStart={handleStampTouchStart}
+              >
+                <img
+                  src={doc.stampUrl}
+                  alt="Company Stamp"
+                  className="dc-stamp-img"
+                  draggable={false}
+                />
+                {!isReadOnly && (
+                  <>
+                    <div className="dc-stamp-hint">
+                      <Move size={10} />
+                    </div>
+                    <div
+                      className="dc-stamp-resize"
+                      onMouseDown={handleStampResizeMouseDown}
+                      onTouchStart={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setIsStampResizing(true)
+                      }}
+                    />
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* SIGNATURES */}
+            <div className="dc-signatures">
+
+              <div className="dc-signature-top">
+                <div className="dc-signature-heading">
+                  Received In Sound Condition By:
+                </div>
+                <div className="dc-signature-heading right">
+                  Delivered By:
+                </div>
+              </div>
+
+              <div className="dc-signature-bottom">
+
+                <div className="dc-signature-block">
+                  <div className="dc-signature-name">
+                    Name:
+                  </div>
+                  <div className="dc-signature-line" />
+                  <div className="dc-signature-label">
+                    Signature
+                  </div>
+                </div>
+
+                <div className="dc-signature-block">
+                  <div className="dc-signature-line right" />
+                  <div className="dc-signature-label right">
+                    Signature
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
       </div>
+
+      {/* ============================================================
+          PRINT CSS (global once)
+          ============================================================ */}
 
       <style
         dangerouslySetInnerHTML={{
-          __html: `
+          __html: DC_PRINT_STYLES
+        }}
+      />
+    </>
+  )
+}
+
+/* ================================================================
+   DC PRINT + LAYOUT CSS
+   ================================================================ */
+
+const DC_PRINT_STYLES = `
+
+/* ============================================================
+   INVOICE-STYLE A4 SHEET (preview + print)
+   ============================================================ */
+
+.dc-sheet {
+  width: 210mm;
+  min-height: 297mm;
+  background: #ffffff;
+  margin: 0 auto;
+  padding: 10mm 8mm 10mm 8mm;
+  box-sizing: border-box;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.dc-title {
+  text-align: center;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 700;
+  text-decoration: underline;
+  margin: 0 0 3mm 0;
+}
+
+.dc-logo {
+  width: 28mm;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  margin: 0 0 1mm 0;
+}
+
+.dc-header {
+  display: grid;
+  grid-template-columns: 43% 57%;
+  column-gap: 4mm;
+  align-items: start;
+}
+
+.dc-left {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.dc-label {
+  font-weight: 700;
+  text-decoration: underline;
+  margin-bottom: 1mm;
+}
+
+.dc-address {
+  white-space: pre-line;
+  margin: 0;
+  padding: 0;
+  line-height: 1.35;
+}
+
+.dc-email {
+  margin-top: 0.5mm;
+  color: #0563c1;
+  text-decoration: underline;
+}
+
+.dc-delivery-to {
+  margin-top: 15.5mm;
+}
+
+.dc-delivery-to-name {
+  font-weight: 600;
+}
+
+.dc-small-text {
+  margin-top: 1mm;
+  font-size: 10px;
+}
+
+.dc-info-box {
+  width: 100%;
+  border: 0.6px solid #b8b8b8;
+  margin: 0;
+}
+
+.dc-info-row {
+  display: grid;
+  grid-template-columns: 50% 50%;
+  min-height: 8mm;
+}
+
+.dc-info-cell {
+  border: 0.6px solid #b8b8b8;
+  display: flex;
+  align-items: center;
+  padding: 1.5mm 2mm;
+  font-size: 10.5px;
+}
+
+.dc-info-label {
+  font-weight: 600;
+  text-align: right;
+  justify-content: flex-end;
+  padding-right: 3mm;
+}
+
+.dc-info-value {
+  font-weight: 600;
+  justify-content: flex-start;
+  padding-left: 3mm;
+}
+
+.dc-products {
+  margin-top: 5mm;
+  width: 100%;
+}
+
+.dc-product-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin: 0;
+}
+
+.dc-product-table th,
+.dc-product-table td {
+  border: 0.6px solid #b8b8b8;
+  padding: 1.8mm 2mm;
+  font-size: 10.5px;
+  vertical-align: top;
+  text-align: center;
+}
+
+.dc-product-table th {
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.dc-product-name {
+  text-align: center !important;
+  font-weight: 500;
+  vertical-align: top !important;
+}
+
+.dc-multi-line {
+  min-height: 5mm;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.dc-signatures {
+  margin-top: 18mm;
+  width: 100%;
+  font-size: 11px;
+}
+
+.dc-signature-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 20mm;
+  margin-bottom: 7mm;
+}
+
+.dc-signature-heading {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.dc-signature-heading.right {
+  text-align: right;
+}
+
+.dc-signature-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 30mm;
+}
+
+.dc-signature-block {
+  min-height: 25mm;
+  position: relative;
+}
+
+.dc-signature-name {
+  font-size: 11px;
+  margin-bottom: 2mm;
+}
+
+.dc-signature-line {
+  width: 72mm;
+  border-bottom: 0.7px solid #333;
+}
+
+.dc-signature-line.right {
+  margin-left: auto;
+}
+
+.dc-signature-label {
+  margin-top: 4mm;
+  font-size: 10px;
+  color: #666;
+}
+
+.dc-signature-label.right {
+  text-align: right;
+}
+
+/* ============================================================
+   STAMP BOX — DRAGGABLE + RESIZABLE
+   ============================================================ */
+
+.dc-stamp-box {
+  position: absolute;
+  cursor: move;
+  user-select: none;
+  touch-action: none;
+  border: 1px dashed rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.8);
+  z-index: 20;
+  transition: border-color 0.15s ease;
+}
+
+.dc-stamp-box:hover {
+  border-color: rgba(0, 0, 0, 0.35);
+}
+
+.dc-stamp-box.is-dragging {
+  cursor: grabbing;
+  border-color: #d97706;
+  background: rgba(217, 119, 6, 0.04);
+}
+
+.dc-stamp-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+
+.dc-stamp-hint {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  color: #d97706;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.dc-stamp-resize {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 12px;
+  height: 12px;
+  background: #d97706;
+  border: 1px solid #ffffff;
+  border-radius: 2px;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
+/* ============================================================
+   PRINT
+   ============================================================ */
 
 @media print {
 
-  .no-print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  html, body {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .dc-print-area,
+  .dc-print-area * {
+    visibility: visible !important;
+  }
+
+  .dc-preview-overlay {
+    position: static !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  .dc-preview-controls {
     display: none !important;
   }
 
+  .dc-print-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 210mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   .dc-sheet {
+    width: 210mm !important;
+    min-height: 297mm !important;
+    margin: 0 !important;
+    padding: 10mm 8mm 10mm 8mm !important;
+    box-sizing: border-box !important;
     box-shadow: none !important;
+    position: relative !important;
   }
 
-  body {
-    background: #fff !important;
+  /* ============================================
+     STAMP ON PRINT
+     ============================================ */
+
+  .dc-stamp-box {
+    border: none !important;
+    background: transparent !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
+  .dc-stamp-hint,
+  .dc-stamp-resize {
+    display: none !important;
+  }
 }
 
 `
-        }}
-      />
 
-    </Modal>
-  )
+/* ================================================================
+   INSERT PRINT CSS ONCE
+   ================================================================ */
+
+if (typeof document !== 'undefined') {
+  const styleId = 'dc-print-styles'
+
+  const oldStyle = document.getElementById(styleId)
+
+  if (!oldStyle) {
+    const style = document.createElement('style')
+    style.id = styleId
+    style.innerHTML = DC_PRINT_STYLES
+    document.head.appendChild(style)
+  }
 }

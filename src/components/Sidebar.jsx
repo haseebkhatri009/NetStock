@@ -152,6 +152,11 @@ const OWNER_NAV = [
   { to: '/create-user', label: 'Create User', icon: UserPlus }
 ]
 
+// Special restricted user - only sees Dashboard, Invoice, Quotation
+const RESTRICTED_USER_EMAIL = 'fatima@pearlnetworks.com.pk'
+
+const RESTRICTED_NAV_ROUTES = ['/', '/invoice', '/quotation']
+
 export default function Sidebar() {
   const { logout, company, profile, user } = useAuth()
   const navigate = useNavigate()
@@ -161,11 +166,25 @@ export default function Sidebar() {
     navigate('/login')
   }
 
+  // Current user's email (fallback to profile/user)
+  const currentEmail = (profile?.email || user?.email || '').toLowerCase().trim()
+
+  // Check if current user is the restricted user
+  const isRestrictedUser = currentEmail === RESTRICTED_USER_EMAIL.toLowerCase()
+
   // Check if user is owner - from profile.role or user.role
-  const isOwner = profile?.role === 'owner' || user?.role === 'owner'
+  const isOwner = !isRestrictedUser && (profile?.role === 'owner' || user?.role === 'owner')
 
   // Combine nav items based on role
-  const allNav = isOwner ? [...NAV, ...OWNER_NAV] : NAV
+  let allNav
+  if (isRestrictedUser) {
+    // Only Dashboard, Invoice, Quotation for the restricted user
+    allNav = NAV.filter((item) => RESTRICTED_NAV_ROUTES.includes(item.to))
+  } else if (isOwner) {
+    allNav = [...NAV, ...OWNER_NAV]
+  } else {
+    allNav = NAV
+  }
 
   // Display role: show "Super Admin" if owner, otherwise show the actual role
   const displayRole = isOwner
