@@ -29823,6 +29823,8 @@ const PRODUCT_NAMES = [
   'GRP2603P',
   'GRP2604P',
   'GRP2612P',
+  'GRP2612W',
+  'GRP2612G',
   'GRP2613P',
   'GRP2614P',
   'GRP2615',
@@ -29942,6 +29944,8 @@ const PRODUCT_CATEGORIES = {
   GRP2603P: 'IP Phone',
   GRP2604P: 'IP Phone',
   GRP2612P: 'IP Phone',
+  GRP2612W: 'IP Phone',
+  GRP2612G: 'IP Phone',
   GRP2613P: 'IP Phone',
   GRP2614P: 'IP Phone',
   GRP2615: 'IP Phone',
@@ -30110,7 +30114,13 @@ const PRODUCT_IMAGES = {
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSExtN8GudHcvN2juwCJY74c-eUXtmo9r9YzBvmPgX9lA&s=10',
 
   GRP2612P:
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRULPF9teDAwkSM3CAaURW9jfcJTiAvFubBBZ2PpxG2w&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRw4vD0OPlts9cavrSBZ1wqYVu7Nw7UKXrwBITFjt9Tfg&s=10',
+
+  GRP2612W:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRw4vD0OPlts9cavrSBZ1wqYVu7Nw7UKXrwBITFjt9Tfg&s=10',
+
+  GRP2612G:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRw4vD0OPlts9cavrSBZ1wqYVu7Nw7UKXrwBITFjt9Tfg&s=10',
 
   GRP2613P:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRwZLwZVF-VyE_WdrdJ3nc7HeHLOcnAobSJi8XNHNV7Zw&s=10',

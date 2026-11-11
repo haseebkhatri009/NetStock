@@ -35248,7 +35248,7 @@ const DC_PRINT_STYLES = `
 
   @page {
     size: A4 portrait;
-    margin: 0;
+    margin: 15mm 8mm 20mm 8mm; 
   }
 
   html, body {
