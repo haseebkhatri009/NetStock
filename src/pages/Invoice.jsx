@@ -49670,7 +49670,7 @@ const CONFECTIONERY_COMPANY_ID = 'fKxuXEaw4ihtBunMYEVRYdKRxsH2'
 
 const RESTRICTED_EMAILS = [
   'fatima@pearlnetworks.com.pk',
-  'talha@pearlnetworks.com.pk',
+  'talha2@pearlnetworks.com.pk',
   // aur emails yahan add karein
 ]
 
