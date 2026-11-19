@@ -29854,6 +29854,7 @@ const PRODUCT_NAMES = [
   'UniFi_U7_LR',
   'UniFi_UCG_Ultra',
   'GWN7700P',
+  'GWN7701PA',
   'GWN7801P',
   'GWN7802P',
   'GWN7803P',
@@ -29912,6 +29913,7 @@ const PRODUCT_NAMES = [
   'UDM_SE',
   'Omada_OC200',
   'IMOU_Ranger_2_2MP',
+  'GUV3100',
   'LVC_3012v',
   'Dinstar_C60GP'
 ]
@@ -29981,6 +29983,7 @@ const PRODUCT_CATEGORIES = {
   UniFi_U7_LR: 'Access Point',
 
   GWN7700P: 'Switch',
+  GWN7701PA: 'Switch',
   GWN7801P: 'Switch',
   GWN7802P: 'Switch',
   GWN7803P: 'Switch',
@@ -30049,6 +30052,7 @@ const PRODUCT_CATEGORIES = {
 
 
   IMOU_Ranger_2_2MP: 'Camera',
+    GUV3100: 'Camera',
   LVC_3012v: 'Camera'
 }
 
@@ -30201,6 +30205,9 @@ const PRODUCT_IMAGES = {
 
   GWN7700P:
   'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSr21EHEY1yKuJKMVsPGdNRhDw-x3I6OkEONP3F1moMqVddMsgVPf6XQZo&s=10',
+
+    GWN7701PA:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTcBZS4NHQ4wSwlXA2yYEfXxGFiMep0J22bUKn1qP8foQ&s=10', 
     
   GWN7801P:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRtyVFWlyOv8NajgAvUBk8x9Qwtl92BHZWxDIsqtaFoWw&s=10',
@@ -30379,6 +30386,9 @@ const PRODUCT_IMAGES = {
 
   IMOU_Ranger_2_2MP:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSjH6ZM6IiWhb1Y_m3xnyYv1edtovtcuecJe2z-jCGqyQ&s=10',
+
+    GUV3100:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRf9TOdTERioztkzk5-hx4Dbzo0b4-yqoOxq86FBHkh-w&s=10',
   LVC_3012v:
     'https://linurosystems.com/Content/images/products/Linuro/Tracking%20camera%20(1).webp'
 }
