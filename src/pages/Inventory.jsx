@@ -29771,7 +29771,7 @@
 
     //remove qty
 
-    import { useEffect, useMemo, useState, useRef } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { ref, push, onValue, remove, get, update } from 'firebase/database'
 import {
   Plus,
