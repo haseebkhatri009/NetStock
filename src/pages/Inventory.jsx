@@ -29820,6 +29820,7 @@ const PRODUCT_NAMES = [
   'GRP2601P',
   'GRP2601W',
   'GRP2602P',
+  'GRP2602G',
   'GRP2603P',
   'GRP2604P',
   'GRP2612P',
@@ -29943,6 +29944,7 @@ const PRODUCT_CATEGORIES = {
   GRP2601P: 'IP Phone',
   GRP2601W: 'IP Phone',
   GRP2602P: 'IP Phone',
+  GRP2602G: 'IP Phone',
   GRP2603P: 'IP Phone',
   GRP2604P: 'IP Phone',
   GRP2612P: 'IP Phone',
@@ -30109,6 +30111,9 @@ const PRODUCT_IMAGES = {
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIQsz_pSIKsZ753LoC-_bjHW4dUxI9E3yPgOadLwLOPA&s=10',
 
   GRP2602P:
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT-EY1nPb7QvxbUBj1aalJDgwaip1-e66yIphKi7p5jpA&s=10',
+
+  GRP2602G:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT-EY1nPb7QvxbUBj1aalJDgwaip1-e66yIphKi7p5jpA&s=10',
 
   GRP2603P:
