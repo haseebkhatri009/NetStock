@@ -30351,7 +30351,7 @@ const PRODUCT_IMAGES = {
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSy9dGPNebgY0QQfLtWZOvVJ_0qMz5iZk71AS0NEGmJrA&s=10',
 
   HT881:
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQnjh3yNg8gqg2rkC_1Lu1k4lVeNedpir97oBTpfECtuQ&s=10',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRGgDRA9E8o-jXEVBsbnQQh0CY8uh8khP_10PDGMc_JSbI5hU-o4rhxJyg&s=10',
 
   UCM6300:
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRrqxvgj28FqoJA0dH-NVdUDVmPmSB9hKKIy_aMj5ml_g&s',
